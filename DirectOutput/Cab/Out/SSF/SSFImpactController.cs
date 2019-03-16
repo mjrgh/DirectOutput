@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using ManagedBass;
+using ManagedBass.Fx;
 
 // <summary>
 // This namespace contains a outputcontroller implementaion which isnt doing anything.
@@ -122,12 +123,10 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             {
                 foreach (IOutput outp in Outputs)
                 {
-                    if (outp.Number == 11 && useFaker)
+                    if (outp.Number == 11)
                     {
                         fakeShaker.SetSpeed(outp.Value);
-                        //Contactors[11].Value = outp.Value;
-                       // Contactors[11].fired = true;
-                        Log.Write("Playing " + outp.Name);
+                       
                         return;
                     }
 
@@ -155,12 +154,14 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                                 Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, 0.75); //pop bumpers, etc are further away, generally :)
                             }
 
+
+                            if (outp.Number < 2) //the flippers
+                            {
+                                Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, 0.25); //HOWEVER...flips don't need 'Full Hollywood' maybe :)
+                            }
+
                             Log.Write("Playing " + outp.Name);
                             Bass.ChannelPlay(stream);
-
-
-
-                            //shaker experiement
                             Contactors[outp.Number].fired = true;
                             Contactors[outp.Number].Value= outp.Value;
                             while (Bass.ChannelIsActive(stream) == PlaybackState.Playing)
@@ -174,7 +175,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                     else
                     {
                         Contactors[outp.Number].fired = false;
-                        Contactors[outp.Number].Value = outp.Value;
+                        Contactors[outp.Number].Value = 0;
                     }
                 }
 
@@ -215,13 +216,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
             
                 Outputs[Output.Number].Value = Output.Value;
-               // Contactors[Output.Number].Value = Output.Value;
-            
-
-            
-
-
-        }/// <summary>
+        }
+        /// <summary>
          /// Adds the outputs from the SoundBank.<br/>
          /// This method adds OutputNumbered objects for all outputs to the list of outputs.
          /// </summary>
@@ -233,7 +229,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 if (!Outputs.Any(x => x.Number == i))
                 {
                     Outputs.Add(new Output() { Name = "{0}.{1:00}".Build(SoundBank.Names[i], i), Number = i, Value = 0 });
-                    Contactors.Add(new SSFnoid() { Number = i, Value = 0 });
+                    Contactors.Add(new SSFnoid() { Number = i, Value = 0 }); //yes, .11 is Shaker...
                     myNames.Add(SoundBank.Names[i]);
                     Log.Write($"Added: {Outputs.Last().Name} to internal list...");
 
@@ -243,6 +239,10 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
     }
 
+    /// <summary>
+    /// The SSFNoid is a simple class for storing state information on the virtual contactors.<br/>
+    /// It can be 
+    /// </summary>
     class SSFnoid
     {
         internal bool fired = false;
@@ -261,14 +261,15 @@ namespace DirectOutput.Cab.Out.SSFImpactController
     }
 
 
-    class Faker
+    class  Faker
     {
         internal bool isShaking = false;
         public byte currentValue = 0;
         internal int startup, running, shutdown;
         internal Stream S1W = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.S1W");
         internal Stream PE = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.PE");
-        internal MemoryStream startstream,runstream = new MemoryStream();
+        internal MemoryStream runstream = new MemoryStream();
+        internal MemoryStream startstream = new MemoryStream();
 
         static Faker()
         {
@@ -344,10 +345,14 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             {
                 //already on, speed not implemented
                 //"speed" to pitch or modifier here
-                return;
+                //Bass.FXSetParameters
+                running = BassFx.TempoCreate(running, BassFlags.Loop);
+                Bass.ChannelSetAttribute(running, ChannelAttribute.Tempo, (speed / 100) );
+           
+               // return;
             }
             
-            Bass.ChannelSetAttribute(startup, ChannelAttribute.Volume, 1);
+            Bass.ChannelSetAttribute(startup, ChannelAttribute.Volume, (speed/255));
             Bass.ChannelAddFlag(running, BassFlags.Loop);
             Bass.ChannelPlay(running);
 
