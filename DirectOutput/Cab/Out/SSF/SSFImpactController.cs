@@ -123,11 +123,11 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             {
                 foreach (IOutput outp in Outputs)
                 {
+                    Log.Write("Checking " + outp.Name);
                     if (outp.Number == 11)
                     {
                         fakeShaker.SetSpeed(outp.Value);
-                       
-                        return;
+                        continue;
                     }
 
 
@@ -135,7 +135,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                     if (Contactors[outp.Number].fired && (Contactors[outp.Number].Value == outp.Value))
                     {
                         Log.Write(String.Format("BYPASS:: Ouput.Number ->{0} Output.Value ->{1}", outp.Number, outp.Value));
-                        return;
+                        continue;
                     }
 
                     if (outp.Value != 0)
@@ -306,8 +306,10 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             //for now:
             if(isShaking && currentValue == 0)
             {
-                Bass.ChannelPause(running);
+                Bass.ChannelStop(running);
                 isShaking = false;
+                Bass.StreamFree(running);
+                Bass.StreamFree(startup);
                 Log.Write("ShakerOFF");
 
             }
@@ -326,6 +328,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
             if (speed == currentValue) // reality: speed == currentValue
             {
+                Log.Write("Shaker: No Change");
                 return;
             }
             Log.Write("ShakerSpped => " + speed.ToString());
@@ -347,13 +350,13 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 //"speed" to pitch or modifier here
                 //Bass.FXSetParameters
                 running = BassFx.TempoCreate(running, BassFlags.Loop);
-                Bass.ChannelSetAttribute(running, ChannelAttribute.Tempo, (speed / 100) );
+                Bass.ChannelSetAttribute(running, ChannelAttribute.Tempo, (speed * 100) );
            
                // return;
             }
             
-            Bass.ChannelSetAttribute(startup, ChannelAttribute.Volume, (speed/255));
-            Bass.ChannelAddFlag(running, BassFlags.Loop);
+            Bass.ChannelSetAttribute(startup, ChannelAttribute.Volume, (255/speed));
+         
             Bass.ChannelPlay(running);
 
           
