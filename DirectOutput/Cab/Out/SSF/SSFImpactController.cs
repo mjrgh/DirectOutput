@@ -32,6 +32,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal MemoryStream ssfStream = new MemoryStream();
         internal bool haveBass, useFaker = false;
         internal Faker fakeShaker;
+        internal BassFlags TargetChannels = BassFlags.SpeakerRear;
 
         /// <summary>
         /// Init initializes the ouput controller.<br />
@@ -141,7 +142,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                     if (outp.Value != 0)
                     {
 
-                        int stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.Default);
+                        int stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, TargetChannels);
                         if (stream != 0)
                         {
 
@@ -157,9 +158,10 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                             if (outp.Number < 2) //the flippers
                             {
-                                Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, 0.25); //HOWEVER...flips don't need 'Full Hollywood' maybe :)
+                                Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, 0.40); //HOWEVER...flips don't need 'Full Hollywood' maybe :)
                             }
 
+                          
                             Log.Write("Playing " + outp.Name);
                             Bass.ChannelPlay(stream);
                             Contactors[outp.Number].fired = true;
@@ -270,6 +272,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal Stream PE = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.PE");
         internal MemoryStream runstream = new MemoryStream();
         internal MemoryStream startstream = new MemoryStream();
+        internal BassFlags TargetChannels = BassFlags.SpeakerRear;
 
         static Faker()
         {
@@ -288,7 +291,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             S1W.CopyTo(startstream);
             PE.CopyTo(runstream);
            
-            startup = Bass.CreateStream(startstream.ToArray(), 0, startstream.Length, BassFlags.Default); //wobly ramp up
+            startup = Bass.CreateStream(startstream.ToArray(), 0, startstream.Length, TargetChannels); //wobly ramp up
             Bass.ChannelSetAttribute(startup, ChannelAttribute.Volume, 1);
             Bass.ChannelPlay(startup);
             Log.Write("ShakerON");
@@ -342,7 +345,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
             if(running == 0)
             {
-                running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, BassFlags.Default); //perfect loop sample
+                running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, TargetChannels); //perfect loop sample
             }
             else
             {
@@ -350,18 +353,14 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 //"speed" to pitch or modifier here
                 //Bass.FXSetParameters
                 running = BassFx.TempoCreate(running, BassFlags.Loop);
-                Bass.ChannelSetAttribute(running, ChannelAttribute.Tempo, (speed * 100) );
+                Bass.ChannelSetAttribute(running, ChannelAttribute.Tempo, ((speed/ 255) * 100 ));
            
-               // return;
             }
             
-            Bass.ChannelSetAttribute(startup, ChannelAttribute.Volume, (255/speed));
-         
+            Bass.ChannelSetAttribute(running, ChannelAttribute.Volume, (speed/255)); //Vol 0.0 -> 1.0
+           
             Bass.ChannelPlay(running);
-
-          
-
-
+            
         }
 
     }
