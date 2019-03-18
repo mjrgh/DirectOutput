@@ -20,9 +20,50 @@ namespace DirectOutput.Cab.Out.SSFImpactController
     /// </summary>
     public class SSFImpactController : OutputControllerBase, IOutputController
     {
+		internal BassFlags TargetChannels = BassFlags.SpeakerRear;
+		private bool _LowImpactMode = false;
+		internal int _DeviceNumber = -1;
 
-        
-        internal SoundBank bank = new SoundBank();
+		/// <summary>
+		/// Gets or sets speakers that SSF will send impactor samples to
+		/// </summary>
+		/// <value>
+		/// One of the ManagedBass.Speaker* enums, i.e. 
+		/// </value>
+		public string Speakers
+		{
+			get { return ""; }
+			set {
+				try
+				{
+					TargetChannels = 0;
+
+					foreach (var Speaker in value.Split('|'))
+					{
+						TargetChannels |= (BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + Speaker);
+					}
+				}
+				catch
+				{
+					Log.Write("Invalid value for Speakers in Cabinet.xml: " + value);
+					TargetChannels = BassFlags.SpeakerRear;
+				}
+			}
+		}
+
+		public string LowImpactMode
+		{
+			get { return _LowImpactMode.ToString(); }
+			set { bool.TryParse(value, out _LowImpactMode); } 
+		}
+
+		public int DeviceNumber
+		{
+			get { return _DeviceNumber; }
+			set { _DeviceNumber = value; }
+		}
+
+		internal SoundBank bank = new SoundBank();
         internal List<String> myNames = new List<String>();
         internal List<SSFnoid> Contactors = new List<SSFnoid>();
 
@@ -32,7 +73,6 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal MemoryStream ssfStream = new MemoryStream();
         internal bool haveBass, useFaker = false;
         internal Faker fakeShaker;
-        internal BassFlags TargetChannels = BassFlags.SpeakerRear;
 
         /// <summary>
         /// Init initializes the ouput controller.<br />
@@ -46,7 +86,6 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         /// <param name="Cabinet">The cabinet object which is using the output controller instance.</param>
         public override void Init(Cabinet Cabinet)
         {
-
             if (bank == null)
             {
                 Log.Exception("Could not Initialize SSFImpactor");
@@ -57,10 +96,24 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             {
                 try
                 {
-                    bank.PrepBox();
+                    bank.PrepBox(_DeviceNumber);
                     var info = Bass.Info;
+					try
+					{
+						for(int dev=1; ;dev++)
+						{
+							var bd = Bass.GetDeviceInfo(dev);
+							Log.Write("BASS device " + dev.ToString() + " is " + bd.Name);
+						}
+					}
+					catch(Exception)
+					{
+						// You have to wait until GetDeviceInfo fails.  Yuck.
+					}
 
-                    if (File.Exists(@"C:\DirectOutput\SSFLI")) //Low Intensity Single channel
+					Log.Write("BASS detects "+ info.SpeakerCount.ToString()+ " speakers.");
+
+                    if (_LowImpactMode || File.Exists(@"C:\DirectOutput\SSFLI"))
                     {
                         SSFLI.CopyTo(ssfStream);
                         SSF = null;
@@ -124,7 +177,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             {
                 foreach (IOutput outp in Outputs)
                 {
-                    Log.Write("Checking " + outp.Name);
+                    //Log.Write("Checking " + outp.Name);
                     if (outp.Number == 11)
                     {
                         fakeShaker.SetSpeed(outp.Value);
@@ -135,17 +188,16 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                     if (Contactors[outp.Number].fired && (Contactors[outp.Number].Value == outp.Value))
                     {
-                        Log.Write(String.Format("BYPASS:: Ouput.Number ->{0} Output.Value ->{1}", outp.Number, outp.Value));
+                        //Log.Write(String.Format("BYPASS:: Ouput.Number ->{0} Output.Value ->{1}", outp.Number, outp.Value));
                         continue;
                     }
 
                     if (outp.Value != 0)
                     {
 
-                        int stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, TargetChannels);
+                        int stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.Mono | TargetChannels);
                         if (stream != 0)
                         {
-
                             if (outp.Number < 4 || outp.Number > 9)
                             {
                                 Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, 1); //Per Rusty, do "front 4" and extras 'harder'
@@ -385,11 +437,11 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             return names;
         }
 
-        public void PrepBox()
+        public void PrepBox(int DeviceNumber)
         {
             try
             {
-                Bass.Init();
+                Bass.Init(DeviceNumber);
             }
             catch (Exception)
             {
