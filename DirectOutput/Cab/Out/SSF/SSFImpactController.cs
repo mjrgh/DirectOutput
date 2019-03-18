@@ -214,7 +214,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                             }
 
                           
-                            Log.Write("Playing " + outp.Name);
+                            Log.Write("Firing " + outp.Name);
                             Bass.ChannelPlay(stream);
                             Contactors[outp.Number].fired = true;
                             Contactors[outp.Number].Value= outp.Value;
@@ -264,7 +264,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         {
             if (Output.Number > Contactors.Count - 1)
             {
-                Log.Write(String.Format("BYPASS:: Ouput.Number ->{0} Outputs[{0}].Value ->{1}, current val not changed, non zero", Output.Number, Output.Value));
+                Log.Write("BYPASS:: Ouput.Number out of Impactor Range Set");
                 return;
             }
 
@@ -324,7 +324,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal Stream PE = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.PE");
         internal MemoryStream runstream = new MemoryStream();
         internal MemoryStream startstream = new MemoryStream();
-        internal BassFlags TargetChannels = BassFlags.SpeakerRear;
+        internal BassFlags TargetChannels = BassFlags.SpeakerRearCenter;
 
         static Faker()
         {
@@ -404,8 +404,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 //already on, speed not implemented
                 //"speed" to pitch or modifier here
                 //Bass.FXSetParameters
-                running = BassFx.TempoCreate(running, BassFlags.Loop);
-                Bass.ChannelSetAttribute(running, ChannelAttribute.Tempo, ((speed/ 255) * 100 ));
+               // running = BassFx.TempoCreate(running, BassFlags.Loop);
+                //Bass.ChannelSetAttribute(running, ChannelAttribute.Tempo, ((speed/ 255) * 100 ));
            
             }
             
