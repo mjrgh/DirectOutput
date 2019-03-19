@@ -153,6 +153,11 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 return;
             }
 
+            if (stream != 0)
+            {
+                Bass.StreamFree(stream);
+            }
+
             Outputs = null;
             try
             {
@@ -192,9 +197,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                     if (outp.Value != 0)
                     {
-                        // (BassFlags)_TargetChannels
-                        //int mixstream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.Decode | BassFlags.Float); // (BassFlags)_TargetChannels
-
+                       
                         if (stream != 0)
                         {
                             if (outp.Number < 4 || outp.Number > 9)
@@ -211,37 +214,11 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                             {
                                 Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, 0.60); //HOWEVER...flips don't need 'Full Hollywood' maybe :)
                             }
-                            /*
-                            float[,] matrix =
-                             {
-                                {0},
-                                {0},
-                                {0},
-                                {0},
-                                {1},
-                                {1},
-                                {1},
-                                {1}
-                            };
-                            var mxr = BassMix.CreateMixerStream(44100, 8, BassFlags.Default);
-                            Bass.ChannelAddFlag(mxr, BassFlags.MixerNonStop);
-                            Bass.ChannelAddFlag(mxr, BassFlags.MixerNoRampin);
-                            BassMix.MixerAddChannel(mxr, mixstream, BassFlags.MixerMatrix);
-                            BassMix.ChannelSetMatrix(mixstream, matrix) ;
-                            //BassMix.ChannelAddFlag(stream, BassFlags.AutoFree);
-                           // BassMix.ChannelAddFlag(stream2, BassFlags.AutoFree);
-                            */
-                            //Bass.ChannelAddFlag(stream, BassFlags.AutoFree);
+                            
                             Log.Write("Firing " + outp.Name);
-
-                            //Bass.ChannelPlay(mxr);
                             Bass.ChannelPlay(stream);
                             Contactors[outp.Number].fired = true;
                             Contactors[outp.Number].Value = outp.Value;
-                            
-                            
-           
-                            //Bass.StreamFree(mxr);
                             
                         }
                     }
