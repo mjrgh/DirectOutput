@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using ManagedBass;
-using ManagedBass.Fx;
+using ManagedBass.Mix;
 
 // <summary>
 // This namespace contains a outputcontroller implementaion which isnt doing anything.
@@ -20,36 +20,36 @@ namespace DirectOutput.Cab.Out.SSFImpactController
     /// </summary>
     public class SSFImpactController : OutputControllerBase, IOutputController
     {
-		internal string _Speakers = "Rear";
-		private bool _LowImpactMode = false;
-		internal int _DeviceNumber = -1;
-		internal uint _TargetChannels = 0;  // Uint because BassFlags enum causes problem here?     
+        internal string _Speakers = "Rear";
+        private bool _LowImpactMode = false;
+        internal int _DeviceNumber = -1;
+        internal uint _TargetChannels = 0;  // Uint because BassFlags enum causes problem here?     
 
-		/// <summary>
-		/// Gets or sets speakers that SSF will send impactor samples to
-		/// </summary>
-		/// <value>
-		/// One of the ManagedBass.Speaker* enums, i.e. 
-		/// </value>
-		public string Speakers
-		{
-			get { return _Speakers; }
-			set { _Speakers = value; }
-		}
+        /// <summary>
+        /// Gets or sets speakers that SSF will send impactor samples to
+        /// </summary>
+        /// <value>
+        /// One of the ManagedBass.Speaker* enums, i.e. 
+        /// </value>
+        public string Speakers
+        {
+            get { return _Speakers; }
+            set { _Speakers = value; }
+        }
 
-		public string LowImpactMode
-		{
-			get { return _LowImpactMode.ToString(); }
-			set { bool.TryParse(value, out _LowImpactMode); } 
-		}
+        public string LowImpactMode
+        {
+            get { return _LowImpactMode.ToString(); }
+            set { bool.TryParse(value, out _LowImpactMode); }
+        }
 
-		public int DeviceNumber
-		{
-			get { return _DeviceNumber; }
-			set { _DeviceNumber = value; }
-		}
+        public int DeviceNumber
+        {
+            get { return _DeviceNumber; }
+            set { _DeviceNumber = value; }
+        }
 
-		internal SoundBank bank = new SoundBank();
+        internal SoundBank bank = new SoundBank();
         internal List<String> myNames = new List<String>();
         internal List<SSFnoid> Contactors = new List<SSFnoid>();
 
@@ -59,6 +59,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal MemoryStream ssfStream = new MemoryStream();
         internal bool haveBass, useFaker = false;
         internal Faker fakeShaker;
+        internal int stream = 0;
 
         /// <summary>
         /// Init initializes the ouput controller.<br />
@@ -78,54 +79,54 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 return;
             }
 
-			try
-			{
-				_TargetChannels = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _Speakers);
-			}
-			catch
-			{
-				Log.Write("Invalid value for Speakers in Cabinet.xml: " + _Speakers);
-				_TargetChannels = (uint)BassFlags.SpeakerRear;
-			}
+            try
+            {
+                _TargetChannels = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _Speakers);
+            }
+            catch
+            {
+                Log.Write("Invalid value for Speakers in Cabinet.xml: " + _Speakers);
+                _TargetChannels = (uint)BassFlags.SpeakerRear;
+            }
 
 
-			if (SoundBank.Names.Count == 0)
+            if (SoundBank.Names.Count == 0)
             {
                 try
                 {
                     bank.PrepBox(_DeviceNumber);
                     var info = Bass.Info;
-					try
-					{
-						for(int dev=1; ;dev++)
-						{
-							var bd = Bass.GetDeviceInfo(dev);
-							Log.Write("BASS device " + dev.ToString() + " is " + bd.Name);
-						}
-					}
-					catch(Exception)
-					{
-						// You have to wait until GetDeviceInfo fails.  Yuck.
-					}
+                    try
+                    {
+                        for (int dev = 1; ; dev++)
+                        {
+                            var bd = Bass.GetDeviceInfo(dev);
+                            Log.Write("BASS device " + dev.ToString() + " is " + bd.Name);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // You have to wait until GetDeviceInfo fails.  Yuck.
+                    }
 
-					Log.Write("BASS detects "+ info.SpeakerCount.ToString()+ " speakers.");
+                    Log.Write("BASS detects " + info.SpeakerCount.ToString() + " speakers.");
 
                     if (_LowImpactMode || File.Exists(@"C:\DirectOutput\SSFLI"))
                     {
                         SSFLI.CopyTo(ssfStream);
                         SSF = null;
                     }
-                    else 
+                    else
                     {
                         SSF.CopyTo(ssfStream);
                         SSFLI = null;
                     }
 
-                    
-                   
-                     useFaker = true;
-                     fakeShaker = new Faker();
-                     Log.Write("SSFShaker activated");
+                    stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_TargetChannels);
+
+                    useFaker = true;
+                    fakeShaker = new Faker();
+                    Log.Write("SSFShaker activated");
                     Log.Write("SSFImpactor \"Hardware\" Initialized\n");
                     haveBass = true;
                     AddOutputs();
@@ -136,8 +137,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 }
             }
 
-            
-          
+
+
         }
 
         /// <summary>
@@ -161,7 +162,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             {
                 Log.Write("Bass subsystem was not initialized");
             }
-           
+
         }
 
         /// <summary>
@@ -191,7 +192,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                     if (outp.Value != 0)
                     {
-                        int stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_TargetChannels);
+                        // (BassFlags)_TargetChannels
+                        //int mixstream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.Decode | BassFlags.Float); // (BassFlags)_TargetChannels
 
                         if (stream != 0)
                         {
@@ -209,14 +211,38 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                             {
                                 Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, 0.60); //HOWEVER...flips don't need 'Full Hollywood' maybe :)
                             }
-
+                            /*
+                            float[,] matrix =
+                             {
+                                {0},
+                                {0},
+                                {0},
+                                {0},
+                                {1},
+                                {1},
+                                {1},
+                                {1}
+                            };
+                            var mxr = BassMix.CreateMixerStream(44100, 8, BassFlags.Default);
+                            Bass.ChannelAddFlag(mxr, BassFlags.MixerNonStop);
+                            Bass.ChannelAddFlag(mxr, BassFlags.MixerNoRampin);
+                            BassMix.MixerAddChannel(mxr, mixstream, BassFlags.MixerMatrix);
+                            BassMix.ChannelSetMatrix(mixstream, matrix) ;
+                            //BassMix.ChannelAddFlag(stream, BassFlags.AutoFree);
+                           // BassMix.ChannelAddFlag(stream2, BassFlags.AutoFree);
+                            */
+                            //Bass.ChannelAddFlag(stream, BassFlags.AutoFree);
                             Log.Write("Firing " + outp.Name);
-                          
+
+                            //Bass.ChannelPlay(mxr);
                             Bass.ChannelPlay(stream);
                             Contactors[outp.Number].fired = true;
-                            Contactors[outp.Number].Value= outp.Value;
-                           
-                            Bass.StreamFree(stream);
+                            Contactors[outp.Number].Value = outp.Value;
+                            
+                            
+           
+                            //Bass.StreamFree(mxr);
+                            
                         }
                     }
                     else
@@ -242,8 +268,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         public SSFImpactController()
         {
             Outputs = new OutputList();
-            
-  
+
+
         }
 
 
@@ -257,17 +283,17 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         {
             if (Output.Number > Contactors.Count - 1)
             {
-               // Log.Write(String.Format("BYPASS:: Ouput.Number ->{0} Outputs[{0}].Value ->{1}, current val not changed, non zero", Output.Number, Output.Value));
+                // Log.Write(String.Format("BYPASS:: Ouput.Number ->{0} Outputs[{0}].Value ->{1}, current val not changed, non zero", Output.Number, Output.Value));
                 return;
             }
 
-            
-                Outputs[Output.Number].Value = Output.Value;
+
+            Outputs[Output.Number].Value = Output.Value;
         }
         /// <summary>
-         /// Adds the outputs from the SoundBank.<br/>
-         /// This method adds OutputNumbered objects for all outputs to the list of outputs.
-         /// </summary>
+        /// Adds the outputs from the SoundBank.<br/>
+        /// This method adds OutputNumbered objects for all outputs to the list of outputs.
+        /// </summary>
         internal void AddOutputs()
         {
 
@@ -300,7 +326,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         {
 
         }
-           
+
         public void Activate()
         {
 
@@ -308,12 +334,12 @@ namespace DirectOutput.Cab.Out.SSFImpactController
     }
 
 
-    class  Faker
+    class Faker
     {
         internal bool isShaking = false;
         public byte currentValue = 0;
         internal int running;
-        
+
         internal Stream PE = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.PE"); //PE40Hz1s
         internal MemoryStream runstream = new MemoryStream();
         internal MemoryStream startstream = new MemoryStream();
@@ -321,31 +347,31 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         static Faker()
         {
             Log.Write("Using SSFImpactor Shaking");
-            
+
         }
 
         public void TurnOn()
         {
-            if(isShaking)
+            if (isShaking)
             {
                 return;
             }
 
             //S1W.CopyTo(startstream);
             PE.CopyTo(runstream);
-            
+
             Log.Write("Shaker::ON");
             isShaking = true;
         }
 
         public void TurnOff()
         {
-            
-            if(isShaking && currentValue == 0)
+
+            if (isShaking && currentValue == 0)
             {
                 Bass.ChannelStop(running);
                 isShaking = false;
-               
+
                 Log.Write("Shaker::OFF");
 
             }
@@ -358,7 +384,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             {
                 TurnOff();
                 currentValue = 0;
-                
+
                 return;
             }
 
@@ -370,13 +396,13 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             Log.Write("ShakerSpeed => " + speed.ToString());
 
 
-            if(!isShaking)
+            if (!isShaking)
             {
                 TurnOn();
                 currentValue = speed;
             }
 
-            if(running == 0)
+            if (running == 0)
             {
                 running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, BassFlags.SpeakerRearCenter); //perfect loop sample
                 Bass.ChannelAddFlag(running, BassFlags.Loop);
@@ -388,10 +414,10 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 //Bass.FXSetParameters
                 //running = BassFx.TempoCreate(running, BassFlags.Loop);
                 //Bass.ChannelSetAttribute(running, ChannelAttribute.Tempo, (speed * 100) );
-           
-               // return;
+
+                // return;
             }
-            
+
             Bass.ChannelSetAttribute(running, ChannelAttribute.Volume, 1.0); //for vairability:  (speed/255)
             Bass.ChannelPlay(running);
 
@@ -411,7 +437,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         //
         static SoundBank()
         {
-            
+
         }
 
         public List<String> BankNames()
@@ -431,7 +457,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 return;
             }
 
-            ports = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8,9, 10, 11, 12, 13, 14 };
+            ports = new List<int> { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 };
             names = new List<String> {  "FlipperLeft", "FlipperRight", "SlingshotLeft", "SlingshotRight",
                 "10-BumperBackLeft", "10-BumperBackCenter","10-BumperBackRight",
                 "10-BumperMiddleLeft", "10-BumperMiddleCenter", "10-BumperMiddleRight", "Knocker","Shaker","Gear",
@@ -443,9 +469,9 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
             for (int i = 0; i < max; i++)
             {
-                Log.Write(String.Format("PORT {0}: {1}", i.ToString(),names[i]));
+                Log.Write(String.Format("PORT {0}: {1}", i.ToString(), names[i]));
             }
-           
+
             Log.Write(String.Format("SSFImpactor: {0} ready.", ports.Count.ToString()));
         }
 
