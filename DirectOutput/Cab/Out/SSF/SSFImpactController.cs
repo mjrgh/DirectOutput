@@ -20,9 +20,10 @@ namespace DirectOutput.Cab.Out.SSFImpactController
     /// </summary>
     public class SSFImpactController : OutputControllerBase, IOutputController
     {
-		internal BassFlags TargetChannels = BassFlags.SpeakerRear;
+		internal string _Speakers = "Rear";
 		private bool _LowImpactMode = false;
 		internal int _DeviceNumber = -1;
+		internal uint _TargetChannels = 0;  // Uint because BassFlags enum causes problem here?     
 
 		/// <summary>
 		/// Gets or sets speakers that SSF will send impactor samples to
@@ -32,23 +33,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 		/// </value>
 		public string Speakers
 		{
-			get { return ""; }
-			set {
-				try
-				{
-					TargetChannels = 0;
-
-					foreach (var Speaker in value.Split('|'))
-					{
-						TargetChannels |= (BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + Speaker);
-					}
-				}
-				catch
-				{
-					Log.Write("Invalid value for Speakers in Cabinet.xml: " + value);
-					TargetChannels = BassFlags.SpeakerRear;
-				}
-			}
+			get { return _Speakers; }
+			set { _Speakers = value; }
 		}
 
 		public string LowImpactMode
@@ -92,7 +78,18 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 return;
             }
 
-            if (SoundBank.Names.Count == 0)
+			try
+			{
+				_TargetChannels = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _Speakers);
+			}
+			catch
+			{
+				Log.Write("Invalid value for Speakers in Cabinet.xml: " + _Speakers);
+				_TargetChannels = (uint)BassFlags.SpeakerRear;
+			}
+
+
+			if (SoundBank.Names.Count == 0)
             {
                 try
                 {
@@ -194,9 +191,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                     if (outp.Value != 0)
                     {
-
-
-                        int stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.SpeakerRear);
+                        int stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_TargetChannels);
 
                         if (stream != 0)
                         {
