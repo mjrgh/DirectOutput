@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using ManagedBass;
-using ManagedBass.Fx;
+using ManagedBass.Fx; 
 using ManagedBass.Mix;
 
 // <summary>
@@ -387,13 +387,17 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal float _impactMod = 1.0F;
 
         internal Stream PE = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.7hzOD"); //PE40Hz1s
+        internal Stream PE1 = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.7hzOD");
         internal MemoryStream runstream = new MemoryStream();
         internal MemoryStream runstream2 = new MemoryStream();
         
 
         public uint Shaker1
         {
-            set { _ShakerChannel1 = value; }
+            set {
+                Log.Write("Shaker1 set to:" + (BassFlags)value);
+                _ShakerChannel1 = value;
+            }
         }
         public uint Shaker2
         {
@@ -420,7 +424,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
             //S1W.CopyTo(startstream);
             PE.CopyTo(runstream);
-            PE.CopyTo(runstream2);
+            PE1.CopyTo(runstream2);
 
             Log.Write("Shaker::ON");
             isShaking = true;
@@ -465,14 +469,16 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             if (running == 0)
             {
                 running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel1); //perfect loop sample
+                Log.Write("running set to speaker::" + (BassFlags)_ShakerChannel1);
                 running2 = Bass.CreateStream(runstream2.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel2);
                 Bass.ChannelAddFlag(running, BassFlags.Loop);
                 Bass.ChannelAddFlag(running2, BassFlags.Loop);
             }
-            
 
-            Bass.ChannelSetAttribute(running, ChannelAttribute.Volume, (speed / 255) * _impactMod); //for variability:  (speed/255)
-            Bass.ChannelSetAttribute(running2, ChannelAttribute.Volume, (speed / 255) * _impactMod);
+            float myFloat = speed;
+            Log.Write("FloatedSpeed::" + myFloat.ToString());
+            Bass.ChannelSetAttribute(running, ChannelAttribute.Volume, (myFloat / 255) * _impactMod); //for variability:  (speed/255)
+            Bass.ChannelSetAttribute(running2, ChannelAttribute.Volume, (myFloat / 255) * _impactMod); // * _impactMod
             Bass.ChannelPlay(running);
             Bass.ChannelPlay(running2);
 
