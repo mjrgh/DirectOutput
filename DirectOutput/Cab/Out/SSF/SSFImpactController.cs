@@ -21,14 +21,16 @@ namespace DirectOutput.Cab.Out.SSFImpactController
     /// </summary>
     public class SSFImpactController : OutputControllerBase, IOutputController
     {
-        internal string _Speakers = "Rear";
+        internal string _FrontExciters = "Rear";
+        internal string _RearExciters = "RearCenter";
         internal string _Shaker1 = "RearCenter";
         internal string _Shaker2 = "Rear";
         private bool _LowImpactMode = false;
         internal int _DeviceNumber = -1;
         internal float _ImpactAmount = 1F;
         internal float _ShakeAmount = 1F;
-        internal uint _TargetChannels = 0;  // Uint because BassFlags enum causes problem here?
+        internal uint _FrontExciterPair = 0;  // Uint because BassFlags enum causes problem here?
+        internal uint _RearExciterPair = 0;
         internal uint _ShakerChannel1 = 0;
         internal uint _ShakerChannel2 = 0;
         internal float _FlipperVolume = 0.50F;
@@ -41,33 +43,73 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         /// <value>
         /// One of the ManagedBass.Speaker* enums, i.e. 
         /// </value>
-        public string Speakers
+        public string FrontExciters
         {
-            get { return _Speakers; }
-            set { _Speakers = value; }
+            get { return _FrontExciters; }
+            set { _FrontExciters = value; }
         }
+        public string RearExciters
+        {
+            get { return _RearExciters; }
+            set { _RearExciters = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the channel where a BassShaker is located, or None to disable
+        /// NB. If a bass shaker is on a .1 channel of a 2.1 exciter amp, choose the 
+        /// exciter channel (eg, RearCenter for a Bass Shaker on the surround/side channel amp
+        /// </summary>
+        /// <value>
+        /// One of the ManagedBass.Speaker* enums, or None
+        /// </value>
         public string BassShaker1
         {
             get { return _Shaker1; }
             set { _Shaker1 = value; }
         }
+        /// <summary>
+        /// Gets or sets the optional/secondary BassShaker, or None to disable
+        /// NB. If a bass shaker is on a .1 channel of a 2.1 exciter amp, choose the 
+        /// exciter channel (eg, RearCenter for a Bass Shaker on the surround/side channel amp
+        /// </summary>
+        /// <value>
+        /// One of the ManagedBass.Speaker* enums, or None
+        /// </value>
         public string BassShaker2
         {
             get { return _Shaker2; }
             set { _Shaker2 = value; }
         }
+        /// <summary>
+        /// Switch to set if all exciters are used for Solenoids
+        /// </summary>
+        /// <value>
+        /// true or false 
+        /// </value>
         public string LowImpactMode
         {
             get { return _LowImpactMode.ToString(); }
             set { bool.TryParse(value, out _LowImpactMode); }
         }
 
+        /// <summary>
+        /// Gets or sets Audio output device used. Defaults to Default/Primary
+        /// </summary>
+        /// <value>
+        ///Number represnting the Device 
+        /// </value>
         public int DeviceNumber
         {
             get { return _DeviceNumber; }
             set { _DeviceNumber = value; }
         }
 
+        /// <summary>
+        /// Sets the percent of strength of the signal from 0 (silent) to 1005
+        /// </summary>
+        /// <value>
+        /// Number, 0 - 100
+        /// </value>
         public float ImpactFactor
         {
             get { return _ImpactAmount; }
@@ -136,15 +178,24 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
             try
             {
-                _TargetChannels = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _Speakers);
-                _ShakerChannel1 = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _Shaker1);
-                _ShakerChannel2 = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _Shaker2);
+                _FrontExciterPair = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _FrontExciters);
+                _RearExciterPair = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _RearExciters);
+                if (_Shaker1 != "None")
+                {
+                    _ShakerChannel1 = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _Shaker1);
+                }
+                if (_Shaker2 != "None")
+                {
+                    _ShakerChannel2 = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + _Shaker2);
+                }
+                
 
             }
             catch
             {
-                Log.Write("Invalid value for Speakers in Cabinet.xml: " + _Speakers);
-                _TargetChannels = (uint)BassFlags.SpeakerRear;
+               Log.Write("Invalid value for a Speaker in Cabinet.xml, using defaults ");
+                _FrontExciterPair = (uint)BassFlags.SpeakerRear;
+                _RearExciterPair = (uint)BassFlags.SpeakerRear;
                 _ShakerChannel1 = (uint)BassFlags.SpeakerRearCenter;
                 _ShakerChannel2 = (uint)BassFlags.SpeakerRear;
             }
@@ -173,24 +224,27 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                     SSF.CopyTo(ssfStream);
                       
-
+                    /*
                     if(_LowImpactMode || File.Exists(@"C:\DirectOutput\SSFLI"))
                     {
                         stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.SpeakerRearRight);
                     }
                     else
-                    {
-                        stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_TargetChannels);
-                        stream1 = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.SpeakerRearCenter);
+                    { 
+                     */
+                        stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_FrontExciterPair);
+                        stream1 = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_RearExciterPair);
 
-                    }
+                    //}
 
 
                     useFaker = true;
-                    fakeShaker = new Faker();
-                    fakeShaker.Shaker1 = _ShakerChannel1;
-                    fakeShaker.Shaker2 = _ShakerChannel2;
-                    fakeShaker.ImpactEffect = _ShakeAmount;
+                    fakeShaker = new Faker
+                    {
+                        Shaker1 = _Shaker1,
+                        Shaker2 = _Shaker2,
+                        ImpactEffect = _ShakeAmount
+                    };
 
                     Log.Write("SSFShaker activated");
                     Log.Write("SSFImpactor \"Hardware\" Initialized\n");
@@ -268,7 +322,6 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                         {
                             if (outp.Number < 4 || outp.Number > 9)
                             {
-                                Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _SlingsEtAlVolume); //Per Rusty, do "front 4" and extras 'harder'
                                 if (stream1 != 0)
                                 {
                                     Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _SlingsEtAlVolume * _ImpactAmount);
@@ -277,7 +330,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                             }
                             else
                             {
-                                Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _BumperVolume); //pop bumpers, etc are further away, generally :)
+                                
                                 if (stream1 != 0)
                                 {
                                     Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _BumperVolume * _ImpactAmount);
@@ -288,7 +341,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                             if (outp.Number < 2) //the flippers
                             {
-                                Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _FlipperVolume); //HOWEVER...flips don't need 'Full Hollywood' maybe :)
+                                //HOWEVER...flips don't need 'Full Hollywood' maybe :)
                                 if (stream1 !=0)
                                 {
                                     Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _FlipperVolume * _ImpactAmount);
@@ -299,10 +352,15 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                             //"mixing" - .Mix seems to just not work "inside" vpx, so...
                           
                             //Log.Write("Firing " + outp.Name);
-                            Bass.ChannelPlay(stream);
-                            if (_LowImpactMode == false) //lay off in LI mode
+                            
+                            if (_LowImpactMode == false) 
                             {
+                                Bass.ChannelPlay(stream);
                                 Bass.ChannelPlay(stream1);
+                            }
+                            else
+                            {
+                                Bass.ChannelPlay(stream); //lay off in LI mode
                             }
                             
                             Contactors[outp.Number].fired = true;
@@ -408,23 +466,37 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal uint _ShakerChannel1 = 0;
         internal uint _ShakerChannel2 = 0;
         internal float _impactMod = 1.0F;
-
+        private string _BassShaker1 = "RearCenter";
+        private string _BassShaker2 = "Rear";
         internal Stream PE = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.7hzOD"); //PE40Hz1s
         internal Stream PE1 = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.7hzOD");
         internal MemoryStream runstream = new MemoryStream();
         internal MemoryStream runstream2 = new MemoryStream();
         
 
-        public uint Shaker1
+        public string Shaker1
         {
             set {
-                Log.Write("Shaker1 set to:" + (BassFlags)value);
-                _ShakerChannel1 = value;
+                Log.Write("Shaker1 set to:" + value);
+                if (value != "None")
+                {
+                    _ShakerChannel1 = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + value);
+                }
+                _BassShaker1 = value;
             }
         }
-        public uint Shaker2
+        public string Shaker2
         {
-            set { _ShakerChannel2 = value; }
+            set
+            {
+                Log.Write("Shaker2 set to:" + value);
+                if (value != "None")
+                {
+                    _ShakerChannel2 = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + value);
+                }
+                _BassShaker2 = value;
+
+            }
         }
         public float ImpactEffect
         {
@@ -493,9 +565,18 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
             if (running == 0)
             {
-                running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel1); //perfect loop sample
-                Log.Write("running set to speaker::" + (BassFlags)_ShakerChannel1);
-                running2 = Bass.CreateStream(runstream2.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel2);
+                if (_BassShaker1 != "None")
+                {
+                    running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel1); //perfect loop sample
+                    Log.Write("BassShaker set to speaker::" + (BassFlags)_ShakerChannel1);
+                }
+
+                if (_BassShaker2 != "None")
+                {
+                    running2 = Bass.CreateStream(runstream2.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel2);
+                    Log.Write("Additional BassShaker set to speaker::" + (BassFlags)_ShakerChannel2);
+                }
+                
                 Bass.ChannelAddFlag(running, BassFlags.Loop);
                 Bass.ChannelAddFlag(running2, BassFlags.Loop);
             }
