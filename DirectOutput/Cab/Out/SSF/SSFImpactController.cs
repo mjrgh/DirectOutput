@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using ManagedBass;
-using ManagedBass.Fx; 
+using ManagedBass.Fx; //these have not been removed yet; reviewing mixer
 using ManagedBass.Mix;
 
 // <summary>
@@ -71,27 +71,27 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         public float ImpactFactor
         {
             get { return _ImpactAmount; }
-            set { _ImpactAmount = value; }
+            set { _ImpactAmount = value/100; }
         }
         public float ShakerImpactFactor
         {
             get { return _ShakeAmount; }
-            set { _ShakeAmount = value; }
+            set { _ShakeAmount = value/100; }
         }
         public float FlipperLevel
         {
             get { return _FlipperVolume; }
-            set { _FlipperVolume = value; }
+            set { _FlipperVolume = value/100; }
         }
         public float BumperLevel
         {
             get { return _BumperVolume; }
-            set { _BumperVolume = value; }
+            set { _BumperVolume = value/100; }
         }
         public float SlingsLevel
         {
             get { return _SlingsEtAlVolume; }
-            set { _SlingsEtAlVolume = value; }
+            set { _SlingsEtAlVolume = value/100; }
         }
 
 
@@ -101,7 +101,6 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
         internal Assembly assembly = Assembly.GetExecutingAssembly();
         internal Stream SSF = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.SSF1C");
-        internal Stream SSFLI = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.SSFLI"); //low intensity
         internal MemoryStream ssfStream = new MemoryStream();
         internal bool haveBass, useFaker = false;
         internal Faker fakeShaker;
@@ -113,8 +112,18 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         /// objects haven been instanciated.
         /// 
         /// Specifically, Init is prepping the "Soundbank" for the currently supported 'hardware'
-        /// and setting the user preffered output style/profile via presence, or lack of, 
-        /// a file named "SSFLI" (Surround Sound Feedback - Low Intensity)
+        /// and setting the user preffered output style/profiles via the following options: 
+        /// - Speakers: a valid named Speaker target regonized by Bass, eg 'Rear' or RearCenter'
+        /// - BassShaker1: Location of "primary" Bass Shaker if not controlled be amp crossover, as recognized by Bass
+        /// - BassShaker2: See Previous
+        /// - LowImpactMode: true or false value determines if alternate routing/less overall intesity is used
+        /// - DeviceNumber: Bass recognized soundcard output if not using Default system device. Devices are listed in DirectOutput.log
+        /// Levels/Fine Tuning options: These all have values from 0 (minimum) to 100 (maximum)
+        /// - ImpactFactor: Global Modifier for relative "effect" overall
+        /// - ShakerImapactFactor: Fine tuning of Shaker intensity.
+        /// - FlipperLevel: Fine tuning of the effect applied to the flippers
+        /// - BumperLevel: same as above, for Pop Bumpers
+        /// - SlingsLevel: the Slingshots and everything else
         /// </summary>
         /// <param name="Cabinet">The cabinet object which is using the output controller instance.</param>
         public override void Init(Cabinet Cabinet)
@@ -162,19 +171,20 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                     Log.Write("BASS detects " + info.SpeakerCount.ToString() + " speakers.");
 
-                    if (_LowImpactMode || File.Exists(@"C:\DirectOutput\SSFLI"))
+                    SSF.CopyTo(ssfStream);
+                      
+
+                    if(_LowImpactMode || File.Exists(@"C:\DirectOutput\SSFLI"))
                     {
-                        SSFLI.CopyTo(ssfStream);
-                        SSF = null;
+                        stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.SpeakerRearRight);
                     }
                     else
                     {
-                        SSF.CopyTo(ssfStream);
-                        SSFLI = null;
+                        stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_TargetChannels);
+                        stream1 = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.SpeakerRearCenter);
+
                     }
 
-                    stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_TargetChannels);
-                    stream1 = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.SpeakerRearCenter);
 
                     useFaker = true;
                     fakeShaker = new Faker();
@@ -259,19 +269,31 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                             if (outp.Number < 4 || outp.Number > 9)
                             {
                                 Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _SlingsEtAlVolume); //Per Rusty, do "front 4" and extras 'harder'
-                                Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _SlingsEtAlVolume * _ImpactAmount);
+                                if (stream1 != 0)
+                                {
+                                    Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _SlingsEtAlVolume * _ImpactAmount);
+                                }
+                                
                             }
                             else
                             {
                                 Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _BumperVolume); //pop bumpers, etc are further away, generally :)
-                                Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _BumperVolume * _ImpactAmount);
+                                if (stream1 != 0)
+                                {
+                                    Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _BumperVolume * _ImpactAmount);
+                                }
+                                
                             }
 
 
                             if (outp.Number < 2) //the flippers
                             {
                                 Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _FlipperVolume); //HOWEVER...flips don't need 'Full Hollywood' maybe :)
-                                Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _FlipperVolume * _ImpactAmount);
+                                if (stream1 !=0)
+                                {
+                                    Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _FlipperVolume * _ImpactAmount);
+                                }
+                                
                             }
 
                             //"mixing" - .Mix seems to just not work "inside" vpx, so...
@@ -357,7 +379,6 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
     /// <summary>
     /// The SSFNoid is a simple class for storing state information on the virtual contactors.<br/>
-    /// It can be 
     /// </summary>
     class SSFnoid
     {
@@ -376,7 +397,9 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         }
     }
 
-
+    /// <summary>
+    /// The Faker is a software implementation of a variable shaker motor.<br/>
+    /// </summary>
     class Faker
     {
         internal bool isShaking = false;
@@ -444,7 +467,9 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             }
         }
 
-
+        /// <summary>
+        /// Motor Variability is ultimately a volume control on the overdriven signal<br/>
+        /// </summary>
         public void SetSpeed(byte speed)
         {
             if (speed == 0)
@@ -486,6 +511,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
     }
 
+    
     class SoundBank
     {
         private static List<int> ports = new List<int>();
