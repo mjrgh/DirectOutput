@@ -97,7 +97,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         /// Gets or sets Audio output device used. Defaults to Default/Primary
         /// </summary>
         /// <value>
-        ///Number represnting the Device 
+        ///Number representing the Device 
         /// </value>
         public int DeviceNumber
         {
@@ -106,7 +106,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         }
 
         /// <summary>
-        /// Sets the percent of strength of the signal from 0 (silent) to 1005
+        /// Sets the percent of strength of the signal from 0 (silent) to 100%
         /// </summary>
         /// <value>
         /// Number, 0 - 100
