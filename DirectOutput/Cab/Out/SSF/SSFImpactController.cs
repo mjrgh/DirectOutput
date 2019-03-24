@@ -146,6 +146,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal MemoryStream ssfStream = new MemoryStream();
         internal bool haveBass, useFaker = false;
         internal Faker fakeShaker;
+        internal SSFGear fakeGear;
         internal int stream = 0, stream1 = 0;
 
         /// <summary>
@@ -246,6 +247,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                         ImpactEffect = _ShakeAmount
                     };
 
+                    fakeGear = new SSFGear();
+
                     Log.Write("SSFShaker activated");
                     Log.Write("SSFImpactor \"Hardware\" Initialized\n");
                     haveBass = true;
@@ -307,7 +310,11 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                         continue;
                     }
 
-
+                    if (outp.Number == 12)
+                    {
+                        fakeGear.GearSet(outp.Value);
+                        continue;
+                    }
 
                     if (Contactors[outp.Number].fired && (Contactors[outp.Number].Value == outp.Value))
                     {
@@ -451,6 +458,44 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
         public void Activate()
         {
+
+        }
+    }
+
+    class SSFGear : SSFnoid
+    {
+        internal Stream OG = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.OG");
+        internal MemoryStream runstream = new MemoryStream();
+        internal int running = 0;
+
+        public void GearSet(byte state)
+        {
+            if (state > 0 && fired)
+            {
+                return;
+            }
+            else if (state > 0 && fired == false)
+            {
+                if (running == 0)
+                {
+                    if (runstream.Length == 0)
+                    {
+                        OG.CopyTo(runstream);
+                    }
+                    
+                    running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, BassFlags.SpeakerRearCenter); //perfect loop sample
+                        Bass.ChannelAddFlag(running, BassFlags.Loop);
+                  
+                }
+
+                Bass.ChannelPlay(running);
+                fired = true;
+            }
+            else
+            {
+                Bass.ChannelStop(running);
+                fired = false;
+            }
 
         }
     }
