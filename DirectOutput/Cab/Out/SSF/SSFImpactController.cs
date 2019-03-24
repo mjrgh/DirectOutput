@@ -29,6 +29,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal int _DeviceNumber = -1;
         internal float _ImpactAmount = 1F;
         internal float _ShakeAmount = 1F;
+        internal float _GearLevel = 1F;
         internal uint _FrontExciterPair = 0;  // Uint because BassFlags enum causes problem here?
         internal uint _RearExciterPair = 0;
         internal uint _ShakerChannel1 = 0;
@@ -135,7 +136,11 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             get { return _SlingsEtAlVolume; }
             set { _SlingsEtAlVolume = value/100; }
         }
-
+        public float GearLevel
+        {
+            get { return _GearLevel; }
+            set { _GearLevel = value / 100; }
+        }
 
         internal SoundBank bank = new SoundBank();
         internal List<String> myNames = new List<String>();
@@ -247,7 +252,10 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                         ImpactEffect = _ShakeAmount
                     };
 
-                    fakeGear = new SSFGear();
+                    fakeGear = new SSFGear()
+                    {
+                        GearLevel = _GearLevel
+                    };
 
                     Log.Write("SSFShaker activated");
                     Log.Write("SSFImpactor \"Hardware\" Initialized\n");
@@ -467,6 +475,13 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal Stream OG = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectOutput.Cab.Out.SSF.OG");
         internal MemoryStream runstream = new MemoryStream();
         internal int running = 0;
+        internal float _GearVolume = 1F;
+
+        public float GearLevel{
+
+            set { _GearVolume = value; }
+        }
+       
 
         public void GearSet(byte state)
         {
@@ -485,6 +500,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                     
                     running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, BassFlags.SpeakerRearCenter); //perfect loop sample
                         Bass.ChannelAddFlag(running, BassFlags.Loop);
+                    Bass.ChannelSetAttribute(running, ChannelAttribute.Volume, 1.0 * _GearVolume);
                   
                 }
 
