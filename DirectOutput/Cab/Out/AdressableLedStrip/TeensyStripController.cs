@@ -617,6 +617,25 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
 
             }
 
+            //Send number of leds per leds strips
+            //It's optional, so Nack are accepted
+            for (var numled = 0; numled < NumberOfLedsPerStrip.Length; ++numled) {
+                int nbleds = NumberOfLedsPerStrip[numled];
+                CommandData = new byte[5] { (byte)'Z', (byte)numled, (byte)(NumberOfLedsPerStrip.Length-1), (byte)(nbleds >> 8), (byte)(nbleds & 255) };
+                ComPort.Write(CommandData, 0, 5);
+                ReceiveData = new byte[1];
+                BytesRead = -1;
+                try {
+                    BytesRead = ReadPortWait(ReceiveData, 0, 1);
+                } catch (Exception E) {
+                    throw new Exception($"Expected 1 bytes after setting the number of leds per ledstrip for strip {numled} , but the read operation resulted in a exception. Will not send data to the controller.", E);
+                }
+
+                if (BytesRead != 1 || (ReceiveData[0] != (byte)'A' && ReceiveData[0] != (byte)'N')) {
+                    throw new Exception($"Expected a Ack (A) or a Nack (N) after setting the number of leds per ledstrip for strip {numled}, but received no answer or a unexpected answer. Will not send data to the controller.");
+                }
+            }
+
             //Clear the buffer and turn off the leds.
             CommandData = new byte[1] { (byte)'C' };
             ComPort.Write(CommandData, 0, 1);
