@@ -640,18 +640,20 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             if (SendPerLedstripLength) {
                 for (var numled = 0; numled < NumberOfLedsPerStrip.Length; ++numled) {
                     int nbleds = NumberOfLedsPerStrip[numled];
-                    CommandData = new byte[5] { (byte)'Z', (byte)numled, (byte)(NumberOfLedsPerStrip.Length - 1), (byte)(nbleds >> 8), (byte)(nbleds & 255) };
-                    ComPort.Write(CommandData, 0, 5);
-                    ReceiveData = new byte[1];
-                    BytesRead = -1;
-                    try {
-                        BytesRead = ReadPortWait(ReceiveData, 0, 1);
-                    } catch (Exception E) {
-                        throw new Exception($"Expected 1 bytes after setting the number of leds for ledstrip {numled} , but the read operation resulted in a exception. Will not send data to the controller.", E);
-                    }
+                    if (nbleds > 0) {
+                        CommandData = new byte[5] { (byte)'Z', (byte)numled, (byte)(NumberOfLedsPerStrip.Length - 1), (byte)(nbleds >> 8), (byte)(nbleds & 255) };
+                        ComPort.Write(CommandData, 0, 5);
+                        ReceiveData = new byte[1];
+                        BytesRead = -1;
+                        try {
+                            BytesRead = ReadPortWait(ReceiveData, 0, 1);
+                        } catch (Exception E) {
+                            throw new Exception($"Expected 1 bytes after setting the number of leds for ledstrip {numled} , but the read operation resulted in a exception. Will not send data to the controller.", E);
+                        }
 
-                    if (BytesRead != 1 || ReceiveData[0] != (byte)'A') {
-                        throw new Exception($"Expected a Ack (A) after setting the number of leds for ledstrip {numled}, but received no answer or a unexpected answer ({(char)ReceiveData[0]}). Will not send data to the controller.");
+                        if (BytesRead != 1 || ReceiveData[0] != (byte)'A') {
+                            throw new Exception($"Expected a Ack (A) after setting the number of leds for ledstrip {numled}, but received no answer or a unexpected answer ({(char)ReceiveData[0]}). Will not send data to the controller.");
+                        }
                     }
                 }
             }
