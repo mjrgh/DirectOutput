@@ -340,6 +340,9 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
         /// <value>
         /// true if the commands are sent
         /// </value>
+        /// <remarks>
+        /// These commands are supported by the new Wemos firmware from yoyofr & aetios50, supporting dynamic ledstrip length setup (part of an overall performance improvement)
+        /// </remarks>
         public bool SendPerLedstripLength
         {
             get { return _SendPerLedstripLength; }
@@ -633,7 +636,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
 
             }
 
-            //Send number of leds per leds strips
+            //Send number of leds per leds strips 
             if (SendPerLedstripLength) {
                 for (var numled = 0; numled < NumberOfLedsPerStrip.Length; ++numled) {
                     int nbleds = NumberOfLedsPerStrip[numled];
@@ -648,7 +651,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
                     }
 
                     if (BytesRead != 1 || ReceiveData[0] != (byte)'A') {
-                        throw new Exception($"Expected a Ack (A) after setting the number of leds for ledstrip {numled}, but received no answer or a unexpected answer. Will not send data to the controller.");
+                        throw new Exception($"Expected a Ack (A) after setting the number of leds for ledstrip {numled}, but received no answer or a unexpected answer ({(char)ReceiveData[0]}). Will not send data to the controller.");
                     }
                 }
             }
