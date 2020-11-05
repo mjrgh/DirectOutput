@@ -332,6 +332,22 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             }
         }
 
+        private bool _SendPerLedstripLength = false;
+
+        /// <summary>
+        /// Set if the controller will send per ledstrip length commands during the handshake.
+        /// </summary>
+        /// <value>
+        /// true if the commands are sent
+        /// </value>
+        public bool SendPerLedstripLength
+        {
+            get { return _SendPerLedstripLength; }
+            set {
+                _SendPerLedstripLength = value;
+            }
+        }
+
         /// <summary>
         /// This method returns the sum of the number of leds configured for the 8 output channels of the Teensy board.
         /// </summary>
@@ -618,21 +634,22 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             }
 
             //Send number of leds per leds strips
-            //It's optional, so Nack are accepted
-            for (var numled = 0; numled < NumberOfLedsPerStrip.Length; ++numled) {
-                int nbleds = NumberOfLedsPerStrip[numled];
-                CommandData = new byte[5] { (byte)'Z', (byte)numled, (byte)(NumberOfLedsPerStrip.Length-1), (byte)(nbleds >> 8), (byte)(nbleds & 255) };
-                ComPort.Write(CommandData, 0, 5);
-                ReceiveData = new byte[1];
-                BytesRead = -1;
-                try {
-                    BytesRead = ReadPortWait(ReceiveData, 0, 1);
-                } catch (Exception E) {
-                    throw new Exception($"Expected 1 bytes after setting the number of leds per ledstrip for strip {numled} , but the read operation resulted in a exception. Will not send data to the controller.", E);
-                }
+            if (SendPerLedstripLength) {
+                for (var numled = 0; numled < NumberOfLedsPerStrip.Length; ++numled) {
+                    int nbleds = NumberOfLedsPerStrip[numled];
+                    CommandData = new byte[5] { (byte)'Z', (byte)numled, (byte)(NumberOfLedsPerStrip.Length - 1), (byte)(nbleds >> 8), (byte)(nbleds & 255) };
+                    ComPort.Write(CommandData, 0, 5);
+                    ReceiveData = new byte[1];
+                    BytesRead = -1;
+                    try {
+                        BytesRead = ReadPortWait(ReceiveData, 0, 1);
+                    } catch (Exception E) {
+                        throw new Exception($"Expected 1 bytes after setting the number of leds for ledstrip {numled} , but the read operation resulted in a exception. Will not send data to the controller.", E);
+                    }
 
-                if (BytesRead != 1 || (ReceiveData[0] != (byte)'A' && ReceiveData[0] != (byte)'N')) {
-                    throw new Exception($"Expected a Ack (A) or a Nack (N) after setting the number of leds per ledstrip for strip {numled}, but received no answer or a unexpected answer. Will not send data to the controller.");
+                    if (BytesRead != 1 || ReceiveData[0] != (byte)'A') {
+                        throw new Exception($"Expected a Ack (A) after setting the number of leds for ledstrip {numled}, but received no answer or a unexpected answer. Will not send data to the controller.");
+                    }
                 }
             }
 
