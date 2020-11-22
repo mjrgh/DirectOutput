@@ -489,7 +489,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
 
 
             if (BytesRead != 3) {
-                throw new Exception("The TeensyStripController did not send the expected 3 bytes containing the data on the max number of leds per channel. Received only {0} bytes. Will not send data to the controller".Build(BytesRead));
+                throw new Exception($"The {this.GetType().ToString()} did not send the expected 3 bytes containing the data on the max number of leds per channel. Received only {BytesRead} bytes. Will not send data to the controller");
             }
             if (ReceiveData[2] != 'A') {
                 throw new Exception("The TeensyStripController did not send a ACK after the data containing the max number of leds per channel. Will not send data to the controller");
@@ -497,7 +497,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             int MaxNumberOfLedsPerChannel = ReceiveData[0] * 256 + ReceiveData[1];
 
             if (NumberOfLedsPerStrip.Any(Nr => Nr > MaxNumberOfLedsPerChannel)) {
-                throw new Exception("The TeensyStripController boards supports up to {0}} leds per channel, but you have defined up to {1} leds per channel. Will not send data to the controller.".Build(MaxNumberOfLedsPerChannel, NumberOfLedsPerStrip.Max()));
+                throw new Exception($"The {this.GetType().ToString()} boards supports up to {MaxNumberOfLedsPerChannel} leds per channel, but you have defined up to {NumberOfLedsPerStrip.Max()} leds per channel. Will not send data to the controller.");
             }
 
 
@@ -531,7 +531,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             string[] PortNames = SerialPort.GetPortNames();
             if (!PortNames.Any(PN => PN == ComPortName))
             {
-                throw new Exception("The specified Com-Port '{0}' does not exist. Found the following Com-Ports: {1}. Will not send data to the controller.".Build(ComPortName, string.Join(", ", PortNames)));
+                throw new Exception($"The specified Com-Port '{ComPortName}' does not exist. Found the following Com-Ports: {string.Join(", ", PortNames)}. Will not send data to the controller.");
             }
 
             Log.Write($"Initializing ComPort {ComPortName} with these settings :\n\tBaudRate {ComPortBaudRate}, Parity {ComPortParity}, DataBits {ComPortDataBits}, StopBits {ComPortStopBits}, R/W Timeouts {ComPortTimeOutMs}ms\n\tHandshake Timings : Open {ComPortOpenWaitMs}ms, Loop Start/End {ComPortHandshakeStartWaitMs}/{ComPortHandshakeEndWaitMs}ms");
@@ -549,7 +549,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             }
             catch (Exception E)
             {
-                throw new Exception("A exception occured while setting the name of the Com-port '{0}'. Found the following Com-Ports: {1}.  Will not send data to the controller.".Build(ComPortName, string.Join(", ", PortNames)), E);
+                throw new Exception($"A exception occured while setting the name of the Com-port '{ComPortName}'. Found the following Com-Ports: {string.Join(", ", PortNames)}.  Will not send data to the controller.", E);
             }
 
             try
@@ -558,7 +558,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             }
             catch (Exception E)
             {
-                throw new Exception("A exception occured while trying to open the Com-port '{0}'. Found the following Com-Ports: {1}.  Will not send data to the controller.".Build(ComPortName, string.Join(", ", PortNames)), E);
+                throw new Exception($"A exception occured while trying to open the Com-port '{ComPortName}'. Found the following Com-Ports: {string.Join(", ", PortNames)}.  Will not send data to the controller.", E);
             }
 
             //Make sure, the controller is in the expected state (ready to receive commands)
@@ -601,7 +601,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             };
             if (!CommandModeOK)
             {
-                Log.Exception("Could not put the controller on com-port {0} into the commandmode. Will not send data to the controller.".Build(ComPortName));
+                Log.Exception($"Could not put the controller on com-port '{ComPortName}' into the commandmode. Will not send data to the controller.");
                 DisconnectFromController();
                 return;
             }
@@ -699,16 +699,16 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
                 }
                 catch (TimeoutException TE)
                 {
-                    throw new Exception("A TimeoutException occured while trying to read byte {0} of {1} from Com-Port {2}.".Build(ByteNumber + 1, NumberOfBytes, ComPort.PortName), TE);
+                    throw new Exception($"A TimeoutException occured while trying to read byte {ByteNumber + 1} of {NumberOfBytes} from Com-Port {ComPort.PortName}.", TE);
                 }
                 catch (Exception E)
                 {
-                    throw new Exception("A exception occured while trying to read byte {0} of {1} from Com-Port {2}.".Build(ByteNumber + 1, NumberOfBytes, ComPort.PortName), E);
+                    throw new Exception($"A exception occured while trying to read byte {ByteNumber + 1} of {NumberOfBytes} from Com-Port {ComPort.PortName}.", E);
                 }
 
                 if (BytesRead != 1)
                 {
-                    throw new Exception("A exception occured while trying to read byte {0} of {1} from Com-Port {2}. Tried to read 1 byte, but received {3} bytes.".Build(new object[] { ByteNumber + 1, NumberOfBytes, ComPort.PortName, BytesRead }));
+                    throw new Exception($"A exception occured while trying to read byte {ByteNumber + 1} of {NumberOfBytes} from Com-Port {ComPort.PortName}. Tried to read 1 byte, but received {BytesRead} bytes.");
                 }
 
                 Buffer[BufferOffset + ByteNumber] = ReadBuffer[0];
