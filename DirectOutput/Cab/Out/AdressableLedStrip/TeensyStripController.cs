@@ -21,7 +21,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
     /// </summary>
     public class TeensyStripController : OutputControllerCompleteBase
     {
-        private int[] NumberOfLedsPerStrip = new int[8];
+        protected int[] NumberOfLedsPerStrip = new int[8];
 
         /// <summary>
         /// Gets or sets the number of leds of ledstrip connected to channel 1 of the Teensy.
@@ -372,8 +372,8 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
         }
 
 
-        SerialPort ComPort = null;
-        int NumberOfLedsPerChannel = -1;
+        protected SerialPort ComPort = null;
+        protected int NumberOfLedsPerChannel = -1;
 
         protected override void UpdateOutputs(byte[] OutputValues)
         {
@@ -474,6 +474,52 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
 
         //}
 
+        protected virtual void SetupController()
+        {
+            //Check max number of leds per channel
+            ComPort.Write(new byte[] { (byte)'M' }, 0, 1);
+            byte[] ReceiveData = new byte[3];
+            int BytesRead = -1;
+
+            try {
+                BytesRead = ReadPortWait(ReceiveData, 0, 3);
+            } catch (Exception E) {
+                throw new Exception("Expected 3 bytes containing data on the max number of leds per channel, but the read operation resulted in a exception. Will not send data to the controller", E);
+            }
+
+
+            if (BytesRead != 3) {
+                throw new Exception("The TeensyStripController did not send the expected 3 bytes containing the data on the max number of leds per channel. Received only {0} bytes. Will not send data to the controller".Build(BytesRead));
+            }
+            if (ReceiveData[2] != 'A') {
+                throw new Exception("The TeensyStripController did not send a ACK after the data containing the max number of leds per channel. Will not send data to the controller");
+            }
+            int MaxNumberOfLedsPerChannel = ReceiveData[0] * 256 + ReceiveData[1];
+
+            if (NumberOfLedsPerStrip.Any(Nr => Nr > MaxNumberOfLedsPerChannel)) {
+                throw new Exception("The TeensyStripController boards supports up to {0}} leds per channel, but you have defined up to {1} leds per channel. Will not send data to the controller.".Build(MaxNumberOfLedsPerChannel, NumberOfLedsPerStrip.Max()));
+            }
+
+
+
+            //Set number of leds per channel
+            NumberOfLedsPerChannel = NumberOfLedsPerStrip.Max();
+            ushort NrOfLeds = (ushort)NumberOfLedsPerChannel;
+            byte[] CommandData = new byte[3] { (byte)'L', (byte)(NrOfLeds >> 8), (byte)(NrOfLeds & 255) };
+            ComPort.Write(CommandData, 0, 3);
+            ReceiveData = new byte[1];
+            BytesRead = -1;
+            try {
+                BytesRead = ReadPortWait(ReceiveData, 0, 1);
+            } catch (Exception E) {
+                throw new Exception("Expected 1 bytes after setting the number of leds per channel, but the read operation resulted in a exception. Will not send data to the controller.", E);
+            }
+
+            if (BytesRead != 1 || ReceiveData[0] != (byte)'A') {
+                throw new Exception("Expected a Ack (A) after setting the number of leds per channel, but received no answer or a unexpected answer. Will not send data to the controller.");
+
+            }
+        }
 
         /// <summary>
         /// This method is called when DOF wants to connect to the controller.
@@ -562,60 +608,11 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
 
 
             //If we reach this point, we know that the controller is ready to accept commands.
+            SetupController();
 
-            //Check max number of leds per channel
-            ComPort.Write(new byte[] { (byte)'M' }, 0, 1);
-            byte[] ReceiveData = new byte[3];
+            byte[] ReceiveData = null;
             int BytesRead = -1;
-
-            try
-            {
-                BytesRead = ReadPortWait(ReceiveData, 0, 3);
-            }
-            catch (Exception E)
-            {
-                throw new Exception("Expected 3 bytes containing data on the max number of leds per channel, but the read operation resulted in a exception. Will not send data to the controller", E);
-            }
-
-
-            if (BytesRead != 3)
-            {
-                throw new Exception("The TeensyStripController did not send the expected 3 bytes containing the data on the max number of leds per channel. Received only {0} bytes. Will not send data to the controller".Build(BytesRead));
-            }
-            if (ReceiveData[2] != 'A')
-            {
-                throw new Exception("The TeensyStripController did not send a ACK after the data containing the max number of leds per channel. Will not send data to the controller");
-            }
-            int MaxNumberOfLedsPerChannel = ReceiveData[0] * 256 + ReceiveData[1];
-
-            if (NumberOfLedsPerStrip.Any(Nr => Nr > MaxNumberOfLedsPerChannel))
-            {
-                throw new Exception("The TeensyStripController boards supports up to {0}} leds per channel, but you have defined up to {1} leds per channel. Will not send data to the controller.".Build(MaxNumberOfLedsPerChannel, NumberOfLedsPerStrip.Max()));
-            }
-
-
-
-            //Set number of leds per channel
-            NumberOfLedsPerChannel = NumberOfLedsPerStrip.Max();
-            ushort NrOfLeds = (ushort)NumberOfLedsPerChannel;
-            byte[] CommandData = new byte[3] { (byte)'L', (byte)(NrOfLeds >> 8), (byte)(NrOfLeds & 255) };
-            ComPort.Write(CommandData, 0, 3);
-            ReceiveData = new byte[1];
-            BytesRead = -1;
-            try
-            {
-                BytesRead = ReadPortWait(ReceiveData, 0, 1);
-            }
-            catch (Exception E)
-            {
-                throw new Exception("Expected 1 bytes after setting the number of leds per channel, but the read operation resulted in a exception. Will not send data to the controller.", E);
-            }
-
-            if (BytesRead != 1 || ReceiveData[0] != (byte)'A')
-            {
-                throw new Exception("Expected a Ack (A) after setting the number of leds per channel, but received no answer or a unexpected answer. Will not send data to the controller.");
-
-            }
+            byte[] CommandData = null;
 
             //Clear the buffer and turn off the leds.
             CommandData = new byte[1] { (byte)'C' };
@@ -687,7 +684,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
         /// <param name="BufferOffset">The buffer offset.</param>
         /// <param name="NumberOfBytes">The number of bytes.</param>
         /// <returns>Number of bytes read.</returns>
-        private int ReadPortWait(byte[] Buffer, int BufferOffset, int NumberOfBytes)
+        protected int ReadPortWait(byte[] Buffer, int BufferOffset, int NumberOfBytes)
         {
 
             byte[] ReadBuffer = new byte[1];
