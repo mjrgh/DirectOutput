@@ -406,11 +406,11 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
                     }
                     catch (Exception E)
                     {
-                        throw new Exception("A exception occured while waiting for the ACK after sending the data for channel {0} of the TeensyStripController.".Build(i + 1), E);
+                        throw new Exception($"A exception occured while waiting for the ACK after sending the data for channel {i+1} of the {this.GetType().ToString()}.", E);
                     }
                     if (BytesRead != 1 || AnswerData[0] != (byte)'A')
                     {
-                        throw new Exception("Received no answer or a unexpected answer while waiting for the ACK after sending the data for channel {0} of the TeensyStripController.".Build(i + 1));
+                        throw new Exception($"Received no answer or a unexpected answer while waiting for the ACK after sending the data for channel {i+1} of the {this.GetType().ToString()}.");
                     }
                     SourcePosition += NrOfLedsOnStrip;
                 }
@@ -428,11 +428,11 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             }
             catch (Exception E)
             {
-                throw new Exception("A exception occured while waiting for the ACK after sending the output command (O) to the TeensyStripController", E);
+                throw new Exception($"A exception occured while waiting for the ACK after sending the output command (O) to the {this.GetType().ToString()}", E);
             }
             if (BytesRead != 1 || AnswerData[0] != (byte)'A')
             {
-                throw new Exception("Received no answer or a unexpected answer while waiting for the ACK after sending the output command (O) to the TeensyStripController");
+                throw new Exception($"Received no answer or a unexpected answer while waiting for the ACK after sending the output command (O) to the {this.GetType().ToString()}");
             }
 
 
@@ -492,7 +492,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
                 throw new Exception($"The {this.GetType().ToString()} did not send the expected 3 bytes containing the data on the max number of leds per channel. Received only {BytesRead} bytes. Will not send data to the controller");
             }
             if (ReceiveData[2] != 'A') {
-                throw new Exception("The TeensyStripController did not send a ACK after the data containing the max number of leds per channel. Will not send data to the controller");
+                throw new Exception($"The {this.GetType().ToString()} did not send a ACK after the data containing the max number of leds per channel. Will not send data to the controller");
             }
             int MaxNumberOfLedsPerChannel = ReceiveData[0] * 256 + ReceiveData[1];
 
@@ -625,12 +625,12 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             }
             catch (Exception E)
             {
-                throw new Exception("Expected 1 bytes after clearing the buffer of the TeensyStripController, but the read operation resulted in a exception. Will not send data to the controller.", E);
+                throw new Exception($"Expected 1 bytes after clearing the buffer of the {this.GetType().ToString()}, but the read operation resulted in a exception. Will not send data to the controller.", E);
             }
 
             if (BytesRead != 1 || ReceiveData[0] != (byte)'A')
             {
-                throw new Exception("Expected a Ack (A) after clearing the buffer of the TeensyStripController, but received no answer or a unexpected answer. Will not send data to the controller.");
+                throw new Exception($"Expected a Ack (A) after clearing the buffer of the {this.GetType().ToString()}, but received no answer or a unexpected answer. Will not send data to the controller.");
             }
 
             CommandData = new byte[1] { (byte)'O' };
@@ -643,12 +643,12 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             }
             catch (Exception E)
             {
-                throw new Exception("Expected 1 bytes after outputing the buffer of the TeensyStripController to the ledstrips, but the read operation resulted in a exception. Will not send data to the controller.", E);
+                throw new Exception($"Expected 1 bytes after outputing the buffer of the {this.GetType().ToString()} to the ledstrips, but the read operation resulted in a exception. Will not send data to the controller.", E);
             }
 
             if (BytesRead != 1 || ReceiveData[0] != (byte)'A')
             {
-                throw new Exception("Expected a Ack (A) after outputing the buffer of the TeensyStripController to the ledstrips, but received no answer or a unexpected answer. Will not send data to the controller.");
+                throw new Exception($"Expected a Ack (A) after outputing the buffer of the {this.GetType().ToString()} to the ledstrips, but received no answer or a unexpected answer. Will not send data to the controller.");
             }
         }
 
