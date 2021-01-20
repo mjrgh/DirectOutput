@@ -375,6 +375,15 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
         protected SerialPort ComPort = null;
         protected int NumberOfLedsPerChannel = -1;
 
+        protected virtual void SendLedstripData(byte[] OutputValues, int TargetPosition)
+        {
+            var NrOfLeds = OutputValues.Length / 3;
+            byte[] CommandData = new byte[5] { (byte)'R', (byte)(TargetPosition >> 8), (byte)(TargetPosition & 255), (byte)(NrOfLeds >> 8), (byte)(NrOfLeds & 255) };
+
+            ComPort.Write(CommandData, 0, 5);
+            ComPort.Write(OutputValues, 0, OutputValues.Length);
+        }
+
         protected override void UpdateOutputs(byte[] OutputValues)
         {
             if (ComPort == null)
@@ -391,10 +400,8 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
                 if (NrOfLedsOnStrip > 0)
                 {
                     int TargetPosition = i * NumberOfLedsPerChannel;
-                    CommandData = new byte[5] { (byte)'R', (byte)(TargetPosition >> 8), (byte)(TargetPosition & 255), (byte)(NrOfLedsOnStrip >> 8), (byte)(NrOfLedsOnStrip & 255) };
 
-                    ComPort.Write(CommandData, 0, 5);
-                    ComPort.Write(OutputValues, SourcePosition * 3, NrOfLedsOnStrip * 3);
+                    SendLedstripData(OutputValues.Skip(SourcePosition*3).Take(NrOfLedsOnStrip*3).ToArray(), TargetPosition);
 
                     BytesRead = -1;
 

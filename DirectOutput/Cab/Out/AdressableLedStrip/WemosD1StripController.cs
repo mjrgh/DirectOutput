@@ -36,18 +36,18 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             }
         }
 
-        private string _PerLedstripBrightness = string.Empty;
+        private bool _UseCompression = false;
 
         /// <summary>
-        /// Set the brightness per ledstrip in the range 0->255
+        /// Use a simple colorbased RLE compression on each ledstrip data when sent
         /// </summary>
         /// <value>
-        /// a string containing brightness values separated by spaces
+        /// true, use the compression when it worth it
         /// </value>
-        public string PerLedstripBrightness
+        public bool UseCompression
         {
-            get { return _PerLedstripBrightness; }
-            set { _PerLedstripBrightness = value; }
+            get { return _UseCompression; }
+            set { _UseCompression = value; }
         }
 
         protected override void SetupController()
@@ -80,33 +80,60 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
                     }
                 }
             }
+        }
 
-            //Send brightness per ledstrip if available
-            if (!PerLedstripBrightness.IsNullOrEmpty()) {
-                var values = PerLedstripBrightness.Split(' ');
-                var minlen = Math.Min(NumberOfLedsPerStrip.Length, values.Length);
-                for (var numled = 0; numled < minlen; ++numled) {
-                    var brightness = 0;
-                    try {
-                        brightness = Int32.Parse(values[numled]).Limit(0, 255);
-                    } catch (Exception E) {
-                        throw new Exception($"Cannot parse brigthness value for ledstrip {numled}, check if there are only [0-255] ranged numbers separated by spaces.", E);
-                    }
-                    CommandData = new byte[4] { (byte)'B', (byte)numled, (byte)(minlen - 1), (byte)(brightness) };
-                    Log.Debug($"Send brightness {brightness} for ledstrip {numled} [{string.Join(" ", CommandData)}].");
-                    ComPort.Write(CommandData, 0, 4);
-                    ReceiveData = new byte[1];
-                    BytesRead = -1;
-                    try {
-                        BytesRead = ReadPortWait(ReceiveData, 0, 1);
-                    } catch (Exception E) {
-                        throw new Exception($"Expected 1 bytes after setting the brightness for ledstrip {numled} , but the read operation resulted in a exception. Will not send data to the controller.", E);
+        protected List<byte> CompressedData = new List<byte>();
+        protected List<byte> UncompressedData = new List<byte>();
+
+        protected override void SendLedstripData(byte[] OutputValues, int TargetPosition)
+        {
+            if (UseCompression) {
+                //Try a simple color based RLE compression
+                CompressedData.Clear();
+                UncompressedData.Clear();
+                UncompressedData.AddRange(OutputValues);
+
+                while (UncompressedData.Count > 0) {
+                    if (UncompressedData.Count == 3) {
+                        CompressedData.Add(1);
+                        CompressedData.Add(UncompressedData[0]);
+                        CompressedData.Add(UncompressedData[1]);
+                        CompressedData.Add(UncompressedData[2]);
+                        UncompressedData.RemoveRange(0, 3);
+                    } else {
+                        byte r = UncompressedData[0];
+                        byte g = UncompressedData[1];
+                        byte b = UncompressedData[2];
+                        UncompressedData.RemoveRange(0, 3);
+                        int value = (r << 16) | (g << 8) | b;
+                        int cnt = 1;
+                        while (UncompressedData.Count > 0 && ((UncompressedData[0] << 16) | (UncompressedData[1] << 8) | UncompressedData[2]) == value && cnt < 128) {
+                            UncompressedData.RemoveRange(0, 3);
+                            cnt++;
+                        }
+                        CompressedData.Add((byte)cnt);
+                        CompressedData.Add(r);
+                        CompressedData.Add(g);
+                        CompressedData.Add(b);
                     }
 
-                    if (BytesRead != 1 || ReceiveData[0] != (byte)'A') {
-                        throw new Exception($"Expected a Ack (A) after setting the brightness for ledstrip {numled}, but received no answer or a unexpected answer ({(char)ReceiveData[0]}). Will not send data to the controller.");
-                    }
                 }
+
+                if (CompressedData.Count < OutputValues.Length) {
+                    var nbData = CompressedData.Count / 4;
+                    var nbLeds = OutputValues.Length / 3;
+                    byte[] CommandData = new byte[7] {  (byte)'Q',
+                                                    (byte)(TargetPosition >> 8), (byte)(TargetPosition & 255),
+                                                    (byte)(nbData >> 8), (byte)(nbData & 255),
+                                                    (byte)(nbLeds >> 8), (byte)(nbLeds & 255)
+                                                    };
+                    ComPort.Write(CommandData, 0, 7);
+                    ComPort.Write(CompressedData.ToArray(), 0, CompressedData.Count);
+                } else {
+                    base.SendLedstripData(OutputValues, TargetPosition);
+                }
+            } else {
+                base.SendLedstripData(OutputValues, TargetPosition);
             }
         }
     }
