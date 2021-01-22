@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DirectOutput.Cab.Out.AdressableLedStrip
@@ -50,6 +51,20 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
             set { _UseCompression = value; }
         }
 
+        private bool _TestOnConnect = false;
+
+        /// <summary>
+        /// Ask the Wemos to make a simple RGB led test when connecting
+        /// </summary>
+        /// <value>
+        /// true, will ask for the test at connection stage
+        /// </value>
+        public bool TestOnConnect
+        {
+            get { return _TestOnConnect; }
+            set { _TestOnConnect = value; }
+        }
+
         protected override void SetupController()
         {
             byte[] ReceiveData = null;
@@ -80,6 +95,30 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
                     }
                 }
             }
+
+            if (TestOnConnect) {
+                CommandData = new byte[1] { (byte)'T' };
+                Log.Debug($"Send a test request to the controller");
+                ComPort.Write(CommandData, 0, 1);
+
+                //Temporary wait before asking the Ack
+                Thread.Sleep(2000);
+
+                ReceiveData = new byte[1];
+                BytesRead = -1;
+                try {
+                    BytesRead = ReadPortWait(ReceiveData, 0, 1);
+                } catch (Exception E) {
+                    throw new Exception($"Expected 1 bytes after requesting a test sequence, but the read operation resulted in a exception. Will not send data to the controller.", E);
+                }
+
+                if (BytesRead != 1 || ReceiveData[0] != (byte)'A') {
+                    throw new Exception($"Expected a Ack (A) after requesting a test sequence, but received no answer or a unexpected answer ({(char)ReceiveData[0]}). Will not send data to the controller.");
+                }
+
+                TestOnConnect = false;
+            }
+
         }
 
         protected List<byte> CompressedData = new List<byte>();
@@ -107,7 +146,7 @@ namespace DirectOutput.Cab.Out.AdressableLedStrip
                         UncompressedData.RemoveRange(0, 3);
                         int value = (r << 16) | (g << 8) | b;
                         int cnt = 1;
-                        while (UncompressedData.Count > 0 && ((UncompressedData[0] << 16) | (UncompressedData[1] << 8) | UncompressedData[2]) == value && cnt < 128) {
+                        while (UncompressedData.Count > 0 && ((UncompressedData[0] << 16) | (UncompressedData[1] << 8) | UncompressedData[2]) == value && cnt < byte.MaxValue-1) {
                             UncompressedData.RemoveRange(0, 3);
                             cnt++;
                         }
