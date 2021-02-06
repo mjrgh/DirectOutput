@@ -439,6 +439,7 @@
     <EmbeddedResource Include="Cab\Out\SSF\PE" />
     <EmbeddedResource Include="Cab\Out\SSF\SSF1C" />
     <EmbeddedResource Include="Cab\Out\SSF\7hzOD" />
+    <EmbeddedResource Include="Cab\Out\SSF\OG" />
     <None Include="ClassDiagram1.cd" />
     <None Include="Config\ledcontrol.ini">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
