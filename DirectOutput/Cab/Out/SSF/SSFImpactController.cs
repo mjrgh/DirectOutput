@@ -230,18 +230,16 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                     SSF.CopyTo(ssfStream);
                       
-                    /*
-                    if(_LowImpactMode || File.Exists(@"C:\DirectOutput\SSFLI"))
+                    if(_LowImpactMode)
                     {
                         stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.SpeakerRearRight);
                     }
                     else
                     { 
-                     */
                         stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_FrontExciterPair);
                         stream1 = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_RearExciterPair);
-
-                    //}
+   
+                    }
 
 
                     useFaker = true;
@@ -337,26 +335,38 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                         {
                             if (outp.Number < 4 || outp.Number > 9)
                             {
+                                if (stream != 0)
+                                {
+                                    Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _SlingsEtAlVolume * _ImpactAmount);
+                                }
                                 if (stream1 != 0)
                                 {
                                     Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _SlingsEtAlVolume * _ImpactAmount);
                                 }
-                                
+
                             }
                             else
                             {
-                                
+
+                                if (stream != 0)
+                                {
+                                    Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _BumperVolume * _ImpactAmount);
+                                }
                                 if (stream1 != 0)
                                 {
                                     Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _BumperVolume * _ImpactAmount);
                                 }
-                                
+
                             }
 
 
                             if (outp.Number < 2) //the flippers
                             {
                                 //HOWEVER...flips don't need 'Full Hollywood' maybe :)
+                                if (stream != 0)
+                                {
+                                    Bass.ChannelSetAttribute(stream, ChannelAttribute.Volume, _FlipperVolume * _ImpactAmount);
+                                }
                                 if (stream1 !=0)
                                 {
                                     Bass.ChannelSetAttribute(stream1, ChannelAttribute.Volume, _FlipperVolume * _ImpactAmount);
