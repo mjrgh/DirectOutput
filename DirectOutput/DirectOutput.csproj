@@ -414,6 +414,7 @@
     <Compile Include="Cab\Toys\ToyList.cs" />
     <EmbeddedResource Include="Costura32\bassmix.dll" />
     <EmbeddedResource Include="Costura32\bass_fx.dll" />
+    <EmbeddedResource Include="Costura32\bass.dll" />
     <Content Include="DirectOutputShapes.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <SubType>Designer</SubType>
