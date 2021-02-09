@@ -207,7 +207,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             }
 
 
-            if (SoundBank.Names.Count == 0)
+            if (SoundBank.Names.Count == 0 || true)  // This should always be run
             {
                 try
                 {
