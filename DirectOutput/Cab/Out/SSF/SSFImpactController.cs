@@ -29,12 +29,12 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal int _DeviceNumber = -1;
         internal float _ImpactAmount = 1F;
         internal float _ShakeAmount = 1F;
-        internal float _GearLevel = 1F;
+        internal float _GearLevel = 0.65F;
         internal uint _FrontExciterPair = 0;  // Uint because BassFlags enum causes problem here?
         internal uint _RearExciterPair = 0;
         internal uint _ShakerChannel1 = 0;
         internal uint _ShakerChannel2 = 0;
-        internal float _FlipperVolume = 0.50F;
+        internal float _FlipperVolume = 0.25F;
         internal float _BumperVolume = 0.75F;
         internal float _SlingsEtAlVolume = 1.0F;
 
@@ -201,7 +201,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
             {
                Log.Write("Invalid value for a Speaker in Cabinet.xml, using defaults ");
                 _FrontExciterPair = (uint)BassFlags.SpeakerRear;
-                _RearExciterPair = (uint)BassFlags.SpeakerRear;
+                _RearExciterPair = (uint)BassFlags.SpeakerRearCenter;
                 _ShakerChannel1 = (uint)BassFlags.SpeakerRearCenter;
                 _ShakerChannel2 = (uint)BassFlags.SpeakerRear;
             }
@@ -232,7 +232,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                       
                     if(_LowImpactMode)
                     {
-                        stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, BassFlags.SpeakerRearRight);
+                        stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_FrontExciterPair);
                     }
                     else
                     { 
@@ -252,6 +252,7 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
                     fakeGear = new SSFGear()
                     {
+                        Shaker1 = _Shaker1,
                         GearLevel = _GearLevel
                     };
 
@@ -486,6 +487,21 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal MemoryStream runstream = new MemoryStream();
         internal int running = 0;
         internal float _GearVolume = 1F;
+        internal uint _ShakerChannel1 = 0;
+        private string _BassShaker1 = "RearCenter";
+
+        public string Shaker1
+        {
+            set
+            {
+                Log.Write("Shaker1 set to:" + value);
+                if (value != "None")
+                {
+                    _ShakerChannel1 = (uint)(BassFlags)Enum.Parse(typeof(BassFlags), "Speaker" + value);
+                }
+                _BassShaker1 = value;
+            }
+        }
 
         public float GearLevel{
 
@@ -507,10 +523,13 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                     {
                         OG.CopyTo(runstream);
                     }
-                    
-                    running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, BassFlags.SpeakerRearCenter); //perfect loop sample
+
+                    if (_BassShaker1 != "None")
+                    {
+                        running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel1); //perfect loop sample
                         Bass.ChannelAddFlag(running, BassFlags.Loop);
-                    Bass.ChannelSetAttribute(running, ChannelAttribute.Volume, 1.0 * _GearVolume);
+                        Bass.ChannelSetAttribute(running, ChannelAttribute.Volume, 1.0 * _GearVolume);
+                    }
                   
                 }
 
