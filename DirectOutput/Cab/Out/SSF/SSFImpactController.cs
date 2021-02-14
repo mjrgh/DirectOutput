@@ -38,6 +38,42 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         internal float _BumperVolume = 0.75F;
         internal float _SlingsEtAlVolume = 1.0F;
 
+        //Create a speaker name dictionary to map speaker assignments to names.
+        //The BassInfo enum can't be used because multiple BassInfo flag names
+        //resolve to the same value.
+
+        public static Dictionary<BassFlags, string> SpeakerNames = new Dictionary<BassFlags, string>() {
+            { BassFlags.SpeakerFront, "SpeakerFront" },
+            { BassFlags.SpeakerRear, "SpeakerRear" },
+            { BassFlags.SpeakerCenterLFE, "SpeakerCenterLFE" },
+            { BassFlags.SpeakerRearCenter, "SpeakerRearCenter" },
+            //{ BassFlags.SpeakerPair1, "SpeakerPair1" },   // Same as SpeakerFront
+            //{ BassFlags.SpeakerPair2, "SpeakerPair2" },   // Same as SpeakerRear
+            //{ BassFlags.SpeakerPair3,"SpeakerPair3" },    // Same as SpeakerCenterLFE
+            //{ BassFlags.SpeakerPair4,"SpeakerPair4" },    // Same as SpeakerRearCenter
+            { BassFlags.SpeakerPair5,"SpeakerPair5" },
+            { BassFlags.SpeakerPair6, "SpeakerPair6" },
+            { BassFlags.SpeakerPair7, "SpeakerPair7" },
+            { BassFlags.SpeakerPair8, "SpeakerPair8" },
+            { BassFlags.SpeakerPair9, "SpeakerPair9" },
+            { BassFlags.SpeakerPair10, "SpeakerPair10" },
+            { BassFlags.SpeakerPair11, "SpeakerPair11" },
+            { BassFlags.SpeakerPair12, "SpeakerPair12" },
+            { BassFlags.SpeakerPair13, "SpeakerPair13" },
+            { BassFlags.SpeakerPair14, "SpeakerPair14" },
+            { BassFlags.SpeakerPair15, "SpeakerPair15" },
+            { BassFlags.SpeakerLeft, "SpeakerLeft" },
+            { BassFlags.SpeakerRight, "SpeakerRight" },
+            { BassFlags.SpeakerFront | BassFlags.SpeakerLeft, "SpeakerFrontLeft" },
+            { BassFlags.SpeakerRear | BassFlags.SpeakerLeft, "SpeakerRearLeft" },
+            { BassFlags.SpeakerCenterLFE | BassFlags.SpeakerLeft, "SpeakerCenter" },
+            { BassFlags.SpeakerRearCenter | BassFlags.SpeakerLeft, "SpeakerRearCenterLeft" },
+            { BassFlags.SpeakerFront | BassFlags.SpeakerRight, "SpeakerFrontRight" },
+            { BassFlags.SpeakerRear | BassFlags.SpeakerRight, "SpeakerRearRight" },
+            { BassFlags.SpeakerCenterLFE | BassFlags.SpeakerRight, "SpeakerLFE" },
+            { BassFlags.SpeakerRearCenter | BassFlags.SpeakerRight, "SpeakerRearCenterRight" }
+        };
+    
         /// <summary>
         /// Gets or sets speakers that SSF will send impactor samples to
         /// </summary>
@@ -209,6 +245,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
 
             if (SoundBank.Names.Count == 0 || true)  // This should always be run
             {
+                DeviceInfo mydevice;
+
                 try
                 {
                     bank.PrepBox(_DeviceNumber);
@@ -226,6 +264,16 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                         // You have to wait until GetDeviceInfo fails.  Yuck.
                     }
 
+                    Log.Write("SSFImpactor DeviceNumber = " + _DeviceNumber);
+
+                    if (_DeviceNumber == -1)
+                    {
+                        Log.Write("BASS using default Windows sound device");
+                    }
+
+                    Log.Write("BASS current device number = " + Bass.CurrentDevice);
+                    mydevice = Bass.GetDeviceInfo(Bass.CurrentDevice);
+                    Log.Write("BASS currnet device name: " + mydevice.Name);
                     Log.Write("BASS detects " + info.SpeakerCount.ToString() + " speakers.");
 
                     SSF.CopyTo(ssfStream);
@@ -233,12 +281,30 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                     if(_LowImpactMode)
                     {
                         stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_FrontExciterPair);
+
+                        if ((stream == 0) && (Bass.LastError == Errors.Speaker))
+                        {
+                            Log.Write("Unable to assign FrontExciters stream to speakers: " + _FrontExciters);
+                        }
+
+
+
                     }
                     else
                     { 
                         stream = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_FrontExciterPair);
+                        if ((stream == 0) && (Bass.LastError == Errors.Speaker))
+                        {
+                             Log.Write("Unable to assign FrontExciters stream to speakers: " + _FrontExciters);
+                        }
+
                         stream1 = Bass.CreateStream(ssfStream.ToArray(), 0, ssfStream.Length, (BassFlags)_RearExciterPair);
-   
+                        if ((stream1 == 0) && (Bass.LastError == Errors.Speaker))
+                        {
+                            Log.Write("Unable to assign RearExciters stream to speakers: " + _RearExciters);
+                        }
+
+
                     }
 
 
@@ -529,6 +595,13 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                         running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel1); //perfect loop sample
                         Bass.ChannelAddFlag(running, BassFlags.Loop);
                         Bass.ChannelSetAttribute(running, ChannelAttribute.Volume, 1.0 * _GearVolume);
+
+                        if ((running == 0) && (Bass.LastError == Errors.Speaker))
+                        {
+                            Log.Write("Unable to assign Shaker1 stream to speakers: " + _BassShaker1);
+                            return;
+                        }
+
                     }
                   
                 }
@@ -658,13 +731,23 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                 if (_BassShaker1 != "None")
                 {
                     running = Bass.CreateStream(runstream.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel1); //perfect loop sample
-                    Log.Write("BassShaker set to speaker::" + (BassFlags)_ShakerChannel1);
+                    Log.Write("BassShaker set to speaker:" + SSFImpactController.SpeakerNames[(BassFlags)_ShakerChannel1]);
+                    if ((running == 0) && (Bass.LastError == Errors.Speaker))
+                    {
+                        Log.Write("Unable to assign Shaker1 stream to speakers: " + _BassShaker1);
+                        return;
+                    }
                 }
 
                 if (_BassShaker2 != "None")
                 {
                     running2 = Bass.CreateStream(runstream2.ToArray(), 0, runstream.Length, (BassFlags)_ShakerChannel2);
-                    Log.Write("Additional BassShaker set to speaker::" + (BassFlags)_ShakerChannel2);
+                    Log.Write("Additional BassShaker set to speaker:" + SSFImpactController.SpeakerNames[(BassFlags)_ShakerChannel2]);
+                    if ((running2 == 0) && (Bass.LastError == Errors.Speaker))
+                    {
+                        Log.Write("Unable to assign Shaker2 stream to speakers: " + _BassShaker2);
+                        return;
+                    }
                 }
                 
                 Bass.ChannelAddFlag(running, BassFlags.Loop);
