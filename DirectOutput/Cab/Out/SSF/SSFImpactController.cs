@@ -447,14 +447,14 @@ namespace DirectOutput.Cab.Out.SSFImpactController
                             
                             if (_LowImpactMode == false) 
                             {
-                                Bass.ChannelPlay(stream);
-                                Bass.ChannelPlay(stream1);
+                                Bass.ChannelPlay(stream, true);
+                                Bass.ChannelPlay(stream1, true);
                             }
                             else
                             {
-                                Bass.ChannelPlay(stream); //lay off in LI mode
+                                Bass.ChannelPlay(stream, true); //lay off in LI mode
                             }
-                            
+
                             Contactors[outp.Number].fired = true;
                             Contactors[outp.Number].Value = outp.Value;
                             
