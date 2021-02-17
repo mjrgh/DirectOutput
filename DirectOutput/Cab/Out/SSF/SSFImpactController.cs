@@ -709,8 +709,8 @@ namespace DirectOutput.Cab.Out.SSFImpactController
         {
             if (speed == 0)
             {
-                TurnOff();
                 currentValue = 0;
+                TurnOff();
 
                 return;
             }
