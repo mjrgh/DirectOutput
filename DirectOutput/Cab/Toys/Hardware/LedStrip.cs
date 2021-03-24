@@ -167,10 +167,10 @@ namespace DirectOutput.Cab.Toys.Hardware
 
         /// <summary>
         /// The brightness gamma correction will be applied on brightness percentage to transform from a linear to exponential intensity.
-        /// default value : 2.2
+        /// range : 0.1 to 10.0, default value : 2.2
         /// </summary>
         /// <remarks>
-        /// This correction is there to adapt to your ledstrip hardware and power supply.
+        /// This correction is there to adapt to your ledstrip hardware and power supply so your brightness percentage better matches final brightness.
         /// </remarks>
         private float _BrightnessGammaCorrection = 2.2f;
         public float BrightnessGammaCorrection
