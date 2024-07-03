@@ -150,50 +150,58 @@ namespace DirectOutput.Cab.Out.DudesCab
         /// </summary>
         protected override void UpdateOutputs(byte[] NewOutputValues)
         {
-            byte extensionChangeMask = 0;
-            ushort[] outputsChangeMask = new ushort[Dev.MaxExtensions];
-            List<byte> changedOutputs = new List<byte>();
+            if (NewOutputValues.All(x => x == 0)) {
+                Dev.AllOff();
+            } else {
+                byte extensionChangeMask = 0;
+                ushort[] outputsChangeMask = new ushort[Dev.MaxExtensions];
+                List<byte> changedOutputs = new List<byte>();
 
-            List<byte> outputBuffer = new List<byte>();
-            outputBuffer.Add(0); //extension mask
+                List<byte> outputBuffer = new List<byte>();
+                outputBuffer.Add(0); //extension mask
 
-            for (int numExt = 0; numExt < Dev.MaxExtensions; numExt++) {
-                outputsChangeMask[numExt] = 0;
-                int maskOffset = outputBuffer.Count;
-                outputBuffer.Add(0);//Low bits of output mask
-                outputBuffer.Add(0);//High bits of output mask
+                for (int numExt = 0; numExt < Dev.MaxExtensions; numExt++) {
+                    outputsChangeMask[numExt] = 0;
+                    int maskOffset = outputBuffer.Count;
+                    outputBuffer.Add(0);//Low bits of output mask
+                    outputBuffer.Add(0);//High bits of output mask
 
-                for (int numOuput = 0; numOuput < Dev.PwmMaxOutputsPerExtension; numOuput++) {
-                    int outputOffset = numExt * Dev.PwmMaxOutputsPerExtension + numOuput;
-                    if (NewOutputValues[outputOffset] != OldOutputValues[outputOffset]) {
-                        //If the DudesCab has a configured extension for this output
-                        if ((Dev.PwmExtensionsMask & (byte)(1 << numExt)) != 0) {
-                            extensionChangeMask |= (byte)(1 << numExt);
-                            outputsChangeMask[numExt] |= (ushort)(1 << numOuput);
-                            outputBuffer.Add(NewOutputValues[outputOffset]);
-                            Log.Instrumentation("DudesCab", $"Output {outputOffset + 1} ({OldOutputValues[outputOffset]}=>{NewOutputValues[outputOffset]}) is sent to an extension ({numExt + 1})");
-                        } else {
-                            if (!firstInit) {
-                                Log.Warning($"Output {outputOffset + 1} ({OldOutputValues[outputOffset]}=>{NewOutputValues[outputOffset]}) is sent to an extension ({numExt + 1}) which wasn't configured on the DudesCab Controller, Please check your Controller or Dof settings");
+                    for (int numOuput = 0; numOuput < Dev.PwmMaxOutputsPerExtension; numOuput++) {
+                        int outputOffset = numExt * Dev.PwmMaxOutputsPerExtension + numOuput;
+                        if (NewOutputValues[outputOffset] != OldOutputValues[outputOffset]) {
+                            //If the DudesCab has a configured extension for this output
+                            if ((Dev.PwmExtensionsMask & (byte)(1 << numExt)) != 0) {
+                                extensionChangeMask |= (byte)(1 << numExt);
+                                outputsChangeMask[numExt] |= (ushort)(1 << numOuput);
+                                outputBuffer.Add(NewOutputValues[outputOffset]);
+                                if (DebugCommunication)
+                                    Log.Debug($"Output {outputOffset + 1} ({OldOutputValues[outputOffset]}=>{NewOutputValues[outputOffset]}) is sent to an extension ({numExt + 1})");
+                            } else {
+                                if (!firstInit) {
+                                    Log.Warning($"Output {outputOffset + 1} ({OldOutputValues[outputOffset]}=>{NewOutputValues[outputOffset]}) is sent to an extension ({numExt + 1}) which wasn't configured on the DudesCab Controller, Please check your Controller or Dof settings");
+                                }
                             }
                         }
                     }
+
+                    if (outputsChangeMask[numExt] != 0) {
+                        if (DebugCommunication)
+                            Log.Debug($"Extenstion {numExt + 1} OutputsMask {(int)outputsChangeMask[numExt]:X4}");
+                        outputBuffer[maskOffset] = (byte)(outputsChangeMask[numExt] & 0xFF);
+                        outputBuffer[maskOffset + 1] = (byte)((outputsChangeMask[numExt] >> 8) & 0xFF);
+                    } else {
+                        outputBuffer.RemoveRange(outputBuffer.Count - 2, 2);
+                    }
                 }
 
-                if (outputsChangeMask[numExt] != 0) {
-                    Log.Instrumentation("DudesCab", $"Extenstion {numExt + 1} OutputsMask {(int)outputsChangeMask[numExt]:X4}");
-                    outputBuffer[maskOffset] = (byte)(outputsChangeMask[numExt] & 0xFF);
-                    outputBuffer[maskOffset + 1] = (byte)((outputsChangeMask[numExt] >> 8) & 0xFF);
-                } else {
-                    outputBuffer.RemoveRange(outputBuffer.Count - 2, 2);
+                if (extensionChangeMask != 0) {
+                    outputBuffer[0] = extensionChangeMask;
+                    if (DebugCommunication)
+                        Log.Debug($"ExtenstionMask {outputBuffer[0]:X2}");
+                    Dev.SendCommand(Device.HIDReportType.RT_PWM_OUTPUTS, outputBuffer.ToArray());
                 }
             }
 
-            if (extensionChangeMask != 0) {
-                outputBuffer[0] = extensionChangeMask;
-                Log.Instrumentation("DudesCab", $"ExtenstionMask {outputBuffer[0]:X2}");
-                Dev.SendCommand(Device.HIDReportType.RT_PWM_OUTPUTS, outputBuffer.ToArray());
-            }
             firstInit = false;
             Array.Copy(NewOutputValues, OldOutputValues, OldOutputValues.Length);
         }
@@ -307,7 +315,7 @@ namespace DirectOutput.Cab.Out.DudesCab
                 answer = ReadUSB().Skip(hidCommandPrefixSize).ToArray();
                 PwmMaxOutputsPerExtension = answer[0];
                 PwmExtensionsMask = answer[1];
-                Log.Write($"    Pwm Informations : Max outputs per extensions {PwmMaxOutputsPerExtension}, Extesnion Mask {(int)PwmExtensionsMask:X2}");
+                Log.Write($"    Pwm Informations : Max outputs per extensions {PwmMaxOutputsPerExtension}, Extension Mask {(int)PwmExtensionsMask:X2}");
 
                 //// presume we have the standard DudesCab complement of 128 outputs
                 this.numOutputs = 128;
