@@ -317,15 +317,15 @@ namespace DirectOutput.Cab.Out.DudesCab
                 string handShake = Encoding.UTF8.GetString(answer).TrimEnd('\0');
                 var splits = handShake.Split('|');
                 if (splits.Length > 1) {
-                    name = splits[0];
+                    this.name = splits[0];
                     handShake = splits[1];
                 }
-                Log.Write($"{name} says : {handShake}");
+                Log.Write($"{this.name} says : {handShake}");
 
                 //Ask for Card Infos
                 SendCommand(HIDReportType.RT_INFOS);
                 answer = ReadUSB().Skip(hidCommandPrefixSize).ToArray();
-                Log.Write($"DudesCab Controller Informations : Name [{name}], v{answer[0]}.{answer[1]}.{answer[2]}, unit #{answer[3]}, Max extensions {answer[4]}");
+                Log.Write($"DudesCab Controller Informations : Name [{this.name}], v{answer[0]}.{answer[1]}.{answer[2]}, unit #{answer[3]}, Max extensions {answer[4]}");
                 unitNo = answer[3];
                 MaxExtensions = answer[4];
 
