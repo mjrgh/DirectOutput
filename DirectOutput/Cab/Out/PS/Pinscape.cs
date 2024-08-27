@@ -260,7 +260,7 @@ namespace DirectOutput.Cab.Out.PS
                 return numOutputs;
             }
 
-            public Device(IntPtr fp, string path, string name, ushort vendorID, ushort productID, short version)
+            public Device(IntPtr fp, string path, string name, ushort vendorID, ushort productID, short version, uint inputReportByteLength)
             {
                 // remember the settings
                 this.fp = fp;
@@ -270,6 +270,7 @@ namespace DirectOutput.Cab.Out.PS
                 this.productID = productID;
                 this.version = version;
                 this.plungerEnabled = true;
+                this.inputReportByteLength = inputReportByteLength;
 
                 // presume we have the standard LedWiz-compatible complement of 32 outputs
                 this.numOutputs = 32;
@@ -332,11 +333,10 @@ namespace DirectOutput.Cab.Out.PS
 			{
 				for (int tries = 0 ; tries < 3 ; ++tries)
 				{
-					const int rptLen = 15;
-					byte[] buf = new byte[rptLen];
+					byte[] buf = new byte[inputReportByteLength];
 					buf[0] = 0x00;
 					uint actual;
-					if (HIDImports.ReadFile(fp, buf, rptLen, out actual, ref ov) == 0)
+					if (HIDImports.ReadFile(fp, buf, inputReportByteLength, out actual, ref ov) == 0)
 					{
 						// if the error is 6 ("invalid handle"), try re-opening the device
 						if (TryReopenHandle())
@@ -345,7 +345,7 @@ namespace DirectOutput.Cab.Out.PS
 						Log.Write("Pinscape Controller USB error reading from device: " + GetLastWin32ErrMsg());
 						return null;
 					}
-					else if (actual != rptLen)
+					else if (actual != inputReportByteLength)
 					{
 						Log.Write("Pinscape Controller USB error reading from device: not all bytes received");
 						return null;
@@ -449,6 +449,7 @@ namespace DirectOutput.Cab.Out.PS
 			public short unitNo;
 			public bool plungerEnabled;
 			public int numOutputs;
+            public uint inputReportByteLength;
 		}
 
 		#endregion
@@ -532,6 +533,7 @@ namespace DirectOutput.Cab.Out.PS
 						// at by checking this information.  Start by getting the preparsed
 						// data from the Windows HID driver.
                         IntPtr ppdata;
+                        uint inputReportSize = 0;
                         if (ok && HIDImports.HidD_GetPreparsedData(fp, out ppdata))
                         {
                             // get the device caps
@@ -546,6 +548,9 @@ namespace DirectOutput.Cab.Out.PS
 							// accept the output controller commands.
                             ok &= (caps.UsagePage == 1 && (caps.Usage == 4 || caps.Usage == 0));
 
+                            // remember the input report size
+                            inputReportSize = caps.InputReportByteLength;
+
                             // done with the preparsed data
                             HIDImports.HidD_FreePreparsedData(ppdata);
                         }
@@ -555,7 +560,7 @@ namespace DirectOutput.Cab.Out.PS
                         if (ok)
 						{
 							// add the device to our list
-							devices.Add(new Device(fp, diDetail.DevicePath, name, attrs.VendorID, attrs.ProductID, attrs.VersionNumber));
+							devices.Add(new Device(fp, diDetail.DevicePath, name, attrs.VendorID, attrs.ProductID, attrs.VersionNumber, inputReportSize));
 
 							// the device list object owns the handle now
 							fp = System.IntPtr.Zero;

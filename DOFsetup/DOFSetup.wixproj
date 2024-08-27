@@ -183,7 +183,8 @@
        SuppressRootDirectory="true"
        GenerateGuidsNow="true"
        SuppressFragments="true"
-       SuppressUniqueIds="true" />
+       SuppressUniqueIds="true"
+       RunAsSeparateProcess="true" />
 
     <!-- Run heat again to generate the Wix script elements for the
     COM type library (.tlb) -->
@@ -197,6 +198,7 @@
        SuppressRootDirectory="true"
        GenerateGuidsNow="true"
        SuppressFragments="true"
-       SuppressUniqueIds="true" />
+       SuppressUniqueIds="true"
+       RunAsSeparateProcess="true" />
   </Target>
 </Project>
