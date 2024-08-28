@@ -55,5 +55,8 @@ better, I'd still go ahead with this despite the drawbacks, but I think
 the install will actually be a more pleasant experience just running the
 two original MSI files - one for 32-bit, one for 64-bit - by hand.  I think
 most users will find this more intuitive, and it makes the separation of
-the two parts a lot more transparent.
+the two parts a lot more transparent.  It also should simplify error
+recovery and troubleshooting, since the user will know exactly which MSI
+is failing if anything goes wrong - with the bundled installer, that would
+be less clear.
 
