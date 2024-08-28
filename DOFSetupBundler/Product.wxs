@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+		  xmlns:bal="http://schemas.microsoft.com/wix/BalExtension">
+	
+	<!--
+	DOF Setup Bundler.
+	
+	The DOF automated installer is now split into three sub-MSI files:
+	
+	1. Common files shared between 32-bit and 64-bit versions, such as
+	configuration .ini and .xml files, and the tester programs.  These 
+	are stored in the main DOF install folder and task-specific subfolders 
+	off the main folder.
+	
+	2. 32-bit COM and DLL objects, in a dof32 subfolder
+	
+	3. 64-bit COM and DLL objects, in a dof64 subfolder
+	
+	The 32-bit and 64-bit installs had to be split into separate MSIs,
+	because WiX doesn't have any way to combine the two setup types in
+	a single MSI.  The main sticking point is that the Windows registry
+	virtualization for 32/64-bitness requires that the MSI be running in
+	the same mode as the programs it's installing, in order to set the
+	correct registry keys for those files.
+	
+	The third "common files" MSI allows us to install 32-bit only, 64-bit
+	only, or both 32- and 64-bit versions according to user preference.
+	The common files are installed in all configurations, so they belong
+	in a separate MSI set.
+	
+	This bundler's job is to provide the UI to select the install location,
+	and then kick off the three sub-installs.
+	-->
+	
+	<!--
+		The UpgradeCode we use for the bundle install is the one we FORMERLY
+		used for the 32-bit install.  We've now refactored the install into three
+		components: the 32-bit executables, the 64-bit executables, and the
+		"bundle", which contains the shared files that are common to both bitness
+		versions (such as the .ini and XML configuration files), and contains
+		the two executable sets as sub-installs.
+	-->
+	<Bundle
+		Manufacturer="DirectOutput"
+		Name="DirectOutput"
+		SplashScreenSourceFile="res\Banner.bmp"
+		UpgradeCode="75f5d8f8-a58b-4a2c-91db-eeef0a114582"
+		Version="1.0">
+
+		<!-- bootstrap UI -->
+		<BootstrapperApplicationRef
+			Id="WixStandardBootstrapperApplication.RtfLicense">
+			<bal:WixStandardBootstrapperApplication LicenseFile="res\DOFLicense.rtf" />
+		</BootstrapperApplicationRef>
+
+		<!-- sub-installs -->
+		<Chain>
+			<MsiPackage Id="DOFCommonFiles" SourceFile="$(var.DOFSetupCommon.TargetPath)">
+				<MsiProperty Name="INSTALLFOLDER" Value="[INSTALLFOLDER]"/>
+			</MsiPackage>
+			<MsiPackage Id="DOF32" SourceFile="$(var.DOFSetup.TargetPath)">
+				<MsiProperty Name="INSTALLFOLDER" Value="[INSTALLFOLDER]\dof32"/>
+			</MsiPackage>
+			<MsiPackage Id="DOF64" SourceFile="..\DOFSetup\bin\x64\$(var.Configuration)\DOFSetup.msi">
+				<MsiProperty Name="INSTALLFOLDER" Value="[INSTALLFOLDER]\dof64"/>
+			</MsiPackage>
+		</Chain>
+		
+	</Bundle>
+</Wix>

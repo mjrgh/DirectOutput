@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	
+	<!--
+	  DOF Shared Files MSI installer.  This installs the common files shared
+		between the 32-bit and 64-bit versions of DOF.  These files are installed
+		in the DOF main folder and task-specific subfolders off the main folder.
+		
+		The DOF main folder no longer contains the COM objects or DLLs, as in
+		earlier versions (before the combined 32/64-bit installer).  The COM
+		objects and DLLs are bitness-specific, so they have to be installed in
+		separate locations to allow both versions to be installed at once.
+		(Alternatively, all of the files could have been renamed with 32/64
+		suffixes, but it seemed simpler to relocate them to subfolders instead
+		and leave the names the same, so that the rest of the build didn't have
+		to change.)  WiX's MSI files are themselves bitness-specific - a 32-bit
+		MSI installs the 32-bit files, a 64-bit MSI installs the 64-bit files -
+		so we have to use separate MSIs for each of those sets.  This third MSI
+		(the present script) handles the files in common to both versions.
+	-->	
+	
+	<!--
+	  Product identification.  The UpgradeCode is the primary key that MS Setup
+		uses to track a product across versions.  We define things in such a way
+		that you can only install one instance (one version) of DOF on a single
+		machine.  This is important because DOF installs COM objects and DLLs
+		that must be advertised globally via registry keys.  If multiple copies
+		of DOF were installed, the last one installed would take over the global
+		registry keys and basically leave the other versions unreachable, but
+		without deleting their files on disk.  In the bad old days when everyone
+		had to hand-install DOF, this caused a lot of grief because people would
+		accidentally move the keys around and then wonder why the configuration
+		files in the old directory were no longer working.
+	-->
+	<Product 
+		Id="*" 
+		Name="DirectOutput Shared Files"
+		Language="1033" 
+		Version="1.0.0.0" 
+		Manufacturer="DirectOutput" 
+		UpgradeCode="CBF3F004-4EA5-445C-81A5-088942CD5233">
+		
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<!--
+      MSI's default settings allow multiple versions of a program to be
+      installed alongside one another simultaneously.  That's what you want
+      for most applications, but not for DOF.  DOF's design makes it highly
+      problematic if multiple versions are installed, since DOF consists of
+      a bunch C# DLLs that have to be in sync with each other, and it hooks
+      into other programs (B2S, PBX) via registry keys and file shortcuts.
+      It's the global nature of those file references that makes it such a
+      problem to have multiple copies of DOF around.  So we override the
+      defaults to try to ensure that only one copy is ever installed.
+      In particular, we set AllowDowngrades="yes" to allow the user to 
+      switch to newer or older DOF versions at any time.  This prevents
+      MSI from creating a new installed product record if installing an
+      older (or equal) version.
+    -->
+		<MajorUpgrade
+      AllowDowngrades="yes"
+      IgnoreRemoveFailure="no"
+      Schedule="afterInstallInitialize" />
+
+		<MediaTemplate EmbedCab="yes" />
+
+		<Feature Id="ProductFeature" Title="DirectOutput Shared Files" Level="1">
+			<ComponentRef Id="DOFSharedFiles" />
+			<ComponentRef Id="SampleConfigFiles" />
+		</Feature>
+	</Product>
+
+
+	<!-- Install folder root -->
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="WINDOWSVOLUME">
+				<Directory Id="INSTALLFOLDER" Name="DirectOutput">
+					<Directory Id="DOFDIR" >
+						<Directory Id="DOFCONFIGDIR" Name="Config" >
+							<Directory Id="DOFCONFIGEXAMPLESDIR" Name="Examples"/>
+						</Directory>
+					</Directory>
+				</Directory>
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<DirectoryRef Id="DOFDIR" >
+			<Component Id="DOFSharedFiles" Guid="9C2CF145-85A1-4504-9DF1-E24E15087443">
+
+				<!-- save the install folder for subsequent updates -->
+				<RegistryKey Root="HKCU" Key="SOFTWARE\DirectOutput\DirectOutput">
+					<RegistryValue Type="string" Name="InstallPath" Value="[DOFDIR]"/>
+				</RegistryKey>
+
+				<!-- 
+				  Remove old DLLs from the shared directory.  These are now stored in
+					bitness-specific subfolders.  If we're installing over an old version,
+					we want to make sure that the old files are removed.
+        -->
+				<RemoveFile Id="RemoveDof" Name="$(var.DirectOutput.TargetFileName)" On="install" />
+				<RemoveFile Id="RemoveB2S" Name="$(var.B2SServerPlugin.TargetFileName)" On="install" />
+				<RemoveFile Id="RemoveB2Spi" Name="B2SServerPluginInterface.dll" On="install" />
+				<RemoveFile Id="RemoveComObj" Name="DirectOutputComObject.dll" On="install" />
+				<RemoveFile Id="RemovePBX" Name="$(var.DirectOutput PinballX Plugin.TargetFileName)" On="install" />
+				<RemoveFile Id="RemoveComReg" Name="$(var.DirectOutputComObjectRegister.TargetFileName)" On="install" />
+				<RemoveFile Id="RemoveCfgTest" Name="$(var.DirectOutputConfigTester.TargetFileName)" On="install" />
+				<RemoveFile Id="RemoveCfgEd" Name="$(var.GlobalConfigEditor.TargetFileName)" On="install" />
+				<RemoveFile Id="RemoveLedTst" Name="$(var.LedControlFileTester.TargetFileName)" On="install" />
+				<RemoveFile Id="RemoveProSlv" Name="$(var.ProPinballSlave.TargetFileName)" On="install" />
+
+				<!--
+				  Also remove any loose DLLs left over from ancient versions from before 
+					we bundled these into the assembly files via Costura.Fody
+				-->
+				<RemoveFile Id="RemoveNJ" Name="Newtonsoft.Json.dll" On="install" />
+				<RemoveFile Id="RemoveFlee" Name="Ciloci.Flee.dll" On="install" />
+				<RemoveFile Id="RemoveFTD2XX32" Name="FTD2XX32.dll" On="install" />
+				<RemoveFile Id="RemovePac" Name="PacDrive32.dll" On="install" />
+				<RemoveFile Id="RemoveHue" Name="Q42.HueApi.dll" On="install" />
+				<RemoveFile Id="RemoveHueCC" Name="Q42.HueApi.ColorConverters.dll" On="install" />
+				<RemoveFile Id="RemoveExts" Name="$(var.Extensions.TargetFileName)" On="install" />
+				
+				<!-- Shared DOF files -->
+				<File Source="$(var.DirectOutput.TargetDir)DirectOutputShapes.png" />
+				<File Source="$(var.DirectOutput.TargetDir)DirectOutputShapes.xml" />
+				<File Source="$(var.DirectOutputConfigTester.TargetPath)" />
+				<File Source="$(var.GlobalConfigEditor.TargetPath)" />
+				<File Source="$(var.LedControlFileTester.TargetPath)" />
+				<File Source="$(var.SolutionDir)LICENSE" />
+
+			</Component>
+		</DirectoryRef>
+
+		<DirectoryRef Id="DOFCONFIGEXAMPLESDIR">
+			<Component Id="SampleConfigFiles" Guid="F372286A-B036-471C-AC42-357EBCB9EBD3">
+				<File Source="$(var.SolutionDir)config\examples\Cabinet.xml" />
+				<File Source="$(var.SolutionDir)config\examples\GlobalConfig_B2SServer.xml" />
+			</Component>
+		</DirectoryRef>
+
+	</Fragment>
+</Wix>

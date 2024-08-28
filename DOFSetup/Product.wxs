@@ -19,8 +19,8 @@
 	  <?define Win64 = "yes" ?>
 	  <?define DirectorySuffix = "64" ?>
 	<?else ?>
-	  <?define msiUpgradeCode = "75f5d8f8-a58b-4a2c-91db-eeef0a114582" ?>
-  	<?define msiProductName = "DirectOutput" ?>
+	  <?define msiUpgradeCode = "94E0D0EE-C078-42C6-AD9F-4030B329A040" ?>
+  	<?define msiProductName = "DirectOutput32" ?>
   	<?define msiBitness = "32" ?>
 	  <?define Win64 = "no" ?>
 	  <?define DirectorySuffix = "" ?>
@@ -64,8 +64,8 @@
 
     <!-- Components to install -->
     <Feature Id="ProductFeature" Title="DirectOutput" Level="1">
-      <ComponentRef Id="DofFiles" />
-      <ComponentRef Id="SampleConfigFiles" />
+			<ComponentRef Id="DofFiles" />
+			<ComponentRef Id="SampleConfigFiles" />
       <ComponentRef Id="DirectOutputComObject.dll" />  <!-- from Generated/RegisterDirectOutputComObjectDll.wxs -->
       <ComponentRef Id="DirectOutputComObject.tlb" />  <!-- from Generated/RegisterDirectOutputComObjectTlb.wxs -->
     </Feature>
@@ -242,29 +242,29 @@
 				<RemoveFile Id="RemoveExts" Name="$(var.Extensions.TargetFileName)" On="install" />
 
         <File Id="MainDofDll" Source="$(var.DirectOutput.TargetPath)" />
-        <File Source="$(var.DirectOutput.TargetDir)DirectOutputShapes.png" />
-        <File Source="$(var.DirectOutput.TargetDir)DirectOutputShapes.xml" />
+        <File Source="$(var.DirectOutput.TargetDir)DirectOutputShapes.png" />  <!-- $$$ moved to shared -->
+        <File Source="$(var.DirectOutput.TargetDir)DirectOutputShapes.xml" />  <!-- $$$ moved to shared -->
         <File Source="$(var.B2SServerPlugin.TargetPath)" />
 
         <!-- NOTE: DirectOutputComObject is included separately via Generated/RegisterDirectOutputComObjectDll.wxs -->
 
         <File Source="$(var.DirectOutput PinballX Plugin.TargetPath)" />
         <File Source="$(var.DirectOutputComObjectRegister.TargetPath)" />
-        <File Source="$(var.DirectOutputConfigTester.TargetPath)" />
-        <File Source="$(var.GlobalConfigEditor.TargetPath)" />
-        <File Source="$(var.LedControlFileTester.TargetPath)" />
+        <File Source="$(var.DirectOutputConfigTester.TargetPath)" />  <!-- $$$ moved to shared -->
+        <File Source="$(var.GlobalConfigEditor.TargetPath)" />  <!-- $$$ moved to shared -->
+        <File Source="$(var.LedControlFileTester.TargetPath)" /> <!-- $$$ moved to shared -->
 
         <File Source="$(var.ProPinballSlave.TargetPath)" />
 
-        <File Source="$(var.SolutionDir)LICENSE" />
+        <File Source="$(var.SolutionDir)LICENSE" />  <!-- $$$ moved to shard -->
       
       </Component>
     </DirectoryRef>
 
     <DirectoryRef Id="DOFCONFIGEXAMPLESDIR">
       <Component Id="SampleConfigFiles" Guid="F372286A-B036-471C-AC42-357EBCB9EBD3">
-        <File Source="$(var.SolutionDir)config\examples\Cabinet.xml" />
-        <File Source="$(var.SolutionDir)config\examples\GlobalConfig_B2SServer.xml" />
+        <File Source="$(var.SolutionDir)config\examples\Cabinet.xml" />  <!-- $$$ moved to shared -->
+        <File Source="$(var.SolutionDir)config\examples\GlobalConfig_B2SServer.xml" />  <!-- $$$ moved to shared -->
       </Component>
     </DirectoryRef>
   </Fragment>
