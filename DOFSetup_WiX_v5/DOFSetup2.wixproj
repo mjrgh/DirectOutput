@@ -1,0 +1,17 @@
+﻿<Project Sdk="WixToolset.Sdk/5.0.1">
+  <ItemGroup>
+    <ProjectReference Include="..\B2SServerPlugin\B2SServerPlugin.csproj" />
+    <ProjectReference Include="..\DirectOutput PinballX Plugin\DirectOutput PinballX Plugin.csproj" />
+    <ProjectReference Include="..\DirectOutputComObjectRegister\DirectOutputComObjectRegister.csproj" />
+    <ProjectReference Include="..\DirectOutputComObject\DirectOutputComObject.vbproj" />
+    <ProjectReference Include="..\DirectOutputConfigTester\DirectOutputConfigTester.csproj" />
+    <ProjectReference Include="..\DirectOutput\DirectOutput.csproj" />
+    <ProjectReference Include="..\GlobalConfigEditor\GlobalConfigEditor.csproj" />
+    <ProjectReference Include="..\LedControlFileTester\LedControlFileTester.csproj" />
+    <ProjectReference Include="..\ProPinballSlave\ProPinballSlave.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.1" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.1" />
+  </ItemGroup>
+</Project>
