@@ -499,12 +499,6 @@ namespace DirectOutput.Cab.Out.DudesCab
             public int MaxExtensions = 0;
             public int PwmMaxOutputsPerExtension = 0;
             public byte PwmExtensionsMask = 0;
-
-            public class OutputRemap
-            {
-                public byte Extension = 0;
-                public byte Output = 0;
-            }
         }
 
         #endregion
