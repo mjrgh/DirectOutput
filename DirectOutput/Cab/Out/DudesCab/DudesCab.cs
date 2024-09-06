@@ -142,6 +142,8 @@ namespace DirectOutput.Cab.Out.DudesCab
             return true;
         }
 
+        protected List<byte> OutputBuffer = new List<byte>();
+
         /// <summary>
         /// Send updated outputs to the physical device.
         /// </summary>
@@ -150,78 +152,61 @@ namespace DirectOutput.Cab.Out.DudesCab
             if (NewOutputValues.All(x => x == 0)) {
                 Dev.AllOff();
             } else {
-                var ValuesToSend = new List<Tuple<Device.OutputRemap, byte>>();
+                OutputBuffer.Clear();
+                OutputBuffer.Add(0); //extension mask
+                int nbValuesToSend = 0;
+
+                byte extMask = 0;
+                byte oldExtMask = 0xFF;
+                int outputMaskOffset = 0;
+                ushort outputMask = 0;
 
                 for (int numDofOutput = 0; numDofOutput < NewOutputValues.Length; numDofOutput++) {
                     if (NewOutputValues[numDofOutput] != OldOutputValues[numDofOutput]) {
-                        if (Dev.PwmOutputRemaps != null) {
-                            ValuesToSend.Add(new Tuple<Device.OutputRemap, byte>(
-                                Dev.PwmOutputRemaps[numDofOutput]
-                                , NewOutputValues[numDofOutput]
-                                    ));
-                        } else {
-                            ValuesToSend.Add(new Tuple<Device.OutputRemap, byte>(
-                                    new Device.OutputRemap {
-                                        Extension = (byte)(numDofOutput / (Dev.MaxExtensions * Dev.PwmMaxOutputsPerExtension)),
-                                        Output = (byte)(numDofOutput % (Dev.MaxExtensions * Dev.PwmMaxOutputsPerExtension))
-                                    }, NewOutputValues[numDofOutput]
-                                    ));
-                        }
+                        byte extNum = (byte)(numDofOutput / Dev.PwmMaxOutputsPerExtension);
+                        byte outputNum = (byte)(numDofOutput % Dev.PwmMaxOutputsPerExtension);
                         if (DebugCommunication) {
-                            var lastvalue = ValuesToSend.Last();
-                            if (lastvalue != null)
-                                Log.Debug($"Prepare Dof Value to send : DOF #{numDofOutput} {OldOutputValues[numDofOutput]} => {NewOutputValues[numDofOutput]}, Extension : {lastvalue.Item1.Extension}, Output : {lastvalue.Item1.Output}");
+                            Log.Debug($"Prepare Dof Value to send : DOF #{numDofOutput} {OldOutputValues[numDofOutput]} => {NewOutputValues[numDofOutput]}, Extension #{extNum}, Output #{outputNum}");
                         }
-                    }
-                }
-
-                if (ValuesToSend.Count > 0) {
-                    if (DebugCommunication)
-                        Log.Debug($"{ValuesToSend.Count} Dof Values to send to Dude's cab");
-                    List<byte> outputBuffer = new List<byte>();
-                    outputBuffer.Add(0); //extension mask
-
-                    byte extMask = 0;
-                    byte oldExtMask = 0xFF;
-                    int outputMaskOffset = 0;
-                    ushort outputMask = 0;
-                    foreach (var valueToSend in ValuesToSend) {
-                        extMask |= (byte)(1 << valueToSend.Item1.Extension);
+                        extMask |= (byte)(1 << extNum);
                         if (oldExtMask != extMask) {
                             //New extension add output masks placeholders
                             oldExtMask = extMask;
                             //Set previous outputmask if available
                             if (outputMask != 0) {
-                                outputBuffer[outputMaskOffset] = (byte)(outputMask & 0xFF);
-                                outputBuffer[outputMaskOffset + 1] = (byte)((outputMask >> 8) & 0xFF);
+                                OutputBuffer[outputMaskOffset] = (byte)(outputMask & 0xFF);
+                                OutputBuffer[outputMaskOffset + 1] = (byte)((outputMask >> 8) & 0xFF);
                                 if (DebugCommunication)
                                     Log.Debug($"        Changed OutputMask 0x{outputMask:X4}");
                                 outputMask = 0;
                             }
                             if (DebugCommunication)
-                                Log.Debug($"    Extension {valueToSend.Item1.Extension} has changes");
-                            outputMaskOffset = outputBuffer.Count;
-                            outputBuffer.Add(0);//Low bits of output mask
-                            outputBuffer.Add(0);//High bits of output mask
+                                Log.Debug($"    Extension {extNum} has changes");
+                            outputMaskOffset = OutputBuffer.Count;
+                            OutputBuffer.Add(0);//Low bits of output mask
+                            OutputBuffer.Add(0);//High bits of output mask
                         }
 
-                        outputMask |= (ushort)(1 << valueToSend.Item1.Output);
-                        outputBuffer.Add(valueToSend.Item2);
+                        outputMask |= (ushort)(1 << outputNum);
+                        OutputBuffer.Add(NewOutputValues[numDofOutput]);
+                        nbValuesToSend++;
                     }
-
-                    //set last outputmask & extmask
-                    if (outputMask != 0) {
-                        outputBuffer[outputMaskOffset] = (byte)(outputMask & 0xFF);
-                        outputBuffer[outputMaskOffset + 1] = (byte)((outputMask >> 8) & 0xFF);
-                        if (DebugCommunication)
-                            Log.Debug($"        Changed OutputMask 0x{outputMask:X4}");
-                    }
-                    outputBuffer[0] = extMask;
-                    if (DebugCommunication)
-                        Log.Debug($"    ExtenstionMask 0x{outputBuffer[0]:X2}");
-
-                    Dev.SendCommand(Device.HIDReportType.RT_PWM_OUTPUTS, outputBuffer.ToArray());
                 }
+
+                //set last outputmask & extmask
+                if (outputMask != 0) {
+                    OutputBuffer[outputMaskOffset] = (byte)(outputMask & 0xFF);
+                    OutputBuffer[outputMaskOffset + 1] = (byte)((outputMask >> 8) & 0xFF);
+                    if (DebugCommunication)
+                        Log.Debug($"        Changed OutputMask 0x{outputMask:X4}");
+                }
+                OutputBuffer[0] = extMask;
+                if (DebugCommunication)
+                    Log.Debug($"    ExtenstionMask 0x{OutputBuffer[0]:X2}");
+
+                if (DebugCommunication)
+                    Log.Debug($"{nbValuesToSend} Dof Values to send to Dude's cab");
+                Dev.SendCommand(Device.HIDReportType.RT_PWM_OUTPUTS, OutputBuffer.ToArray());
             }
 
             Array.Copy(NewOutputValues, OldOutputValues, OldOutputValues.Length);
@@ -290,10 +275,9 @@ namespace DirectOutput.Cab.Out.DudesCab
                 return unitNo;
             }
 
-            public int NumOutputs()
-            {
-                return (PwmOutputRemaps == null) ? 128 : PwmOutputRemaps.Count;
-            }
+            private int _NumOutputs = 128;
+
+            public int NumOutputs() => _NumOutputs;
 
             static readonly int hidCommandPrefixSize = 5;
 
@@ -326,6 +310,8 @@ namespace DirectOutput.Cab.Out.DudesCab
                 if (splits.Length > 1) {
                     this.name = splits[0];
                     handShake = splits[1];
+                } else {
+                    Log.Warning($"Old Dude's Cab handshake, you should update your firmware");
                 }
                 Log.Write($"{this.name} says : {handShake}");
 
@@ -337,7 +323,7 @@ namespace DirectOutput.Cab.Out.DudesCab
                 MaxExtensions = answer[4];
 
                 //// presume we have the standard DudesCab complement of 128 outputs
-                this.PwmOutputRemaps = null;
+                this._NumOutputs = 128;
 
                 //Ask for Pwm Configuration
                 SendCommand(HIDReportType.RT_PWM_GETEXTENSIONSINFOS);
@@ -355,20 +341,22 @@ namespace DirectOutput.Cab.Out.DudesCab
                     }
                     var curMask = 0;
 
-                    int highestOutput = 0;
+                    this._NumOutputs = 0;
                     for (var ext = 0; ext < MaxExtensions; ext++) {
                         if ((PwmExtensionsMask & (byte)(1 << ext)) != 0) {
                             for (var output = 0; output < PwmMaxOutputsPerExtension; output++) {
                                 if ((masks[curMask] & (ushort)(1 << output)) != 0) {
-                                    highestOutput = (ext * PwmMaxOutputsPerExtension) + output;
+                                    this._NumOutputs = Math.Max(this._NumOutputs, (ext * PwmMaxOutputsPerExtension) + output);
                                 }
                             }
                             curMask++;
                         }
                     }
+                    Log.Write($"    Output configuration received, highest configured out is #{this._NumOutputs +1}");
+                } else {
+                    Log.Write($"    No output configuration received (firmware before 1.1.2), {this._NumOutputs} will be used");
+                }
 
-                    PwmOutputRemaps = Enumerable.Range(0, highestOutput).Select(i => new OutputRemap { Extension = (byte)(i / PwmMaxOutputsPerExtension), Output = (byte)(i % PwmMaxOutputsPerExtension) }).ToList();
-                } 
             }
 
             private System.Threading.NativeOverlapped ov;
@@ -517,8 +505,6 @@ namespace DirectOutput.Cab.Out.DudesCab
                 public byte Extension = 0;
                 public byte Output = 0;
             }
-
-            public List<OutputRemap> PwmOutputRemaps = null;
         }
 
         #endregion
