@@ -1,7 +1,4 @@
-﻿// Use #define DebugLog or #undef DebugLog to turn debug log messages on or off.
-#define DEBUGLOG
-
-using System;
+﻿using System;
 using System.IO;
 using System.Diagnostics;
 using System.Threading;
