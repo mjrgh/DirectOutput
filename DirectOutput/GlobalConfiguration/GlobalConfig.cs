@@ -476,6 +476,15 @@ namespace DirectOutput.GlobalConfiguration
             return LogFilePattern.ReplacePlaceholders(R);
         }
 
+
+        private string _LogLevel = "Info";
+
+        public string LogLevel
+        {
+            get { return _LogLevel; }
+            set { _LogLevel = value; }
+        }
+
         #endregion
 
 
@@ -680,7 +689,7 @@ namespace DirectOutput.GlobalConfiguration
                 }
                 else
                 {
-                    Log.Write("Global config file \"" + GlobalConfigFileName + "\" does not exist; no global config loaded");
+                    Log.Error("Global config file \"" + GlobalConfigFileName + "\" does not exist; no global config loaded");
                     return null;
                 }
             }

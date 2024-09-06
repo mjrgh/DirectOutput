@@ -14,6 +14,14 @@ namespace DirectOutput
     /// </summary>
     public class Log
     {
+        public enum ELogLevel
+        {
+            Exception = 0,
+            Error,
+            Warning,
+            Debug  
+        }
+
         static StreamWriter Logger;
         static bool IsInitialized = false;
         static bool IsOk = false;
@@ -21,6 +29,8 @@ namespace DirectOutput
         private static readonly object Locker = new object();
 
         private static string _Filename = ".\\DirectOutput.log";
+
+        private static ELogLevel _LogLevel = ELogLevel.Warning;
 
         // collection of records from before the log file was set up, to allow
         // logging and debugging of initial config file setup
@@ -38,6 +48,22 @@ namespace DirectOutput
             set { _Filename = value; }
         }
 
+        /// <summary>
+        /// Gets or sets the log level.
+        /// </summary>
+        /// <value>
+        /// The Log level (Exception/Error/Warning/Debug).
+        /// </value>
+        public static string LogLevel
+        {
+            get { return _LogLevel.ToString(); }
+            set { 
+                if (!Enum.TryParse(value, ignoreCase:true, out _LogLevel)){
+                    _LogLevel = ELogLevel.Warning;
+                    Error($"Error when setting LogLevel, trying to set value [{value}], available values are [Exception,Error,Warning,Debug], defaulting to Warning");
+                }
+            }
+        }
 
         /// <summary>
         /// Initializes the log using the file defined in the Filename property.
@@ -163,17 +189,30 @@ namespace DirectOutput
         /// <param name="Message">The message.</param>
         public static void Write(string Message)
         {
-            if (Message.IsNullOrWhiteSpace())
-            {
+            if (Message.IsNullOrWhiteSpace()) {
                 WriteRaw("{0}\t{1}".Build(DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss.fff"), ""));
-            }
-            else
-            {
+            } else {
                 foreach (string M in Message.Split(new[] { '\r', '\n' }))
                     WriteRaw("{0}\t{1}".Build(DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss.fff"), M));
             }
         }
 
+        /// <summary>
+        /// Writes an error message to the log.
+        /// </summary>
+        /// <param name="Message">The message.</param>
+        public static void Error(string Message)
+        {
+            if (_LogLevel < ELogLevel.Error)
+                return;
+            Write("Error: {0}".Build(Message));
+        }
+
+        /// <summary>
+        /// Writes a warning message to the log.
+        /// </summary>
+        /// <param name="Message">The message.</param>
+        public static void Warning(string Message)
 		/// <summary>
 		/// One-time message logging.  Logs a message, identified by a string
 		/// key, <b>only</b> the first time the key is used.  This is useful for
@@ -212,6 +251,8 @@ namespace DirectOutput
 		/// <param name="Message">The message.</param>
 		public static void Warning(string Message)
         {
+            if (_LogLevel < ELogLevel.Warning)
+                return;
             Write("Warning: {0}".Build(Message));
         }
 
@@ -282,16 +323,13 @@ namespace DirectOutput
             Exception("", E);
         }
 
-
-        //TODO: Make conditional compilation work
         /// <summary>
         /// Writes the specified debug message to the log file.
-        /// \note The calls to this method are only executed, if the DebugLog symbol is defined. Generally this will only be active in special debug releases. The statement to define or undefine the DebugLog symbol can be found on the top of the code of this class.
         /// </summary>
         /// <param name="Message">The message to be written to the log file.</param>
-        // [Conditional("DEBUGLOG")]
         public static void Debug(string Message = "")
         {
+            if (_LogLevel < ELogLevel.Debug) return;
             Write("Debug: {0}".Build(Message));
         }
 
