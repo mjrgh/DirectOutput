@@ -171,7 +171,7 @@ namespace DirectOutput.Cab.Out.DudesCab
                             extensionChangeMask |= (byte)(1 << numExt);
                             outputsChangeMask[numExt] |= (ushort)(1 << numOuput);
                             outputBuffer.Add(NewOutputValues[outputOffset]);
-                            Log.Debug($"Output {outputOffset + 1} ({OldOutputValues[outputOffset]}=>{NewOutputValues[outputOffset]}) is sent to an extension ({numExt + 1})");
+                            Log.Instrumentation("DudesCab", $"Output {outputOffset + 1} ({OldOutputValues[outputOffset]}=>{NewOutputValues[outputOffset]}) is sent to an extension ({numExt + 1})");
                         } else {
                             if (!firstInit) {
                                 Log.Warning($"Output {outputOffset + 1} ({OldOutputValues[outputOffset]}=>{NewOutputValues[outputOffset]}) is sent to an extension ({numExt + 1}) which wasn't configured on the DudesCab Controller, Please check your Controller or Dof settings");
@@ -181,7 +181,7 @@ namespace DirectOutput.Cab.Out.DudesCab
                 }
 
                 if (outputsChangeMask[numExt] != 0) {
-                    Log.Debug($"Extenstion {numExt + 1} OutputsMask {(int)outputsChangeMask[numExt]:X4}");
+                    Log.Instrumentation("DudesCab", $"Extenstion {numExt + 1} OutputsMask {(int)outputsChangeMask[numExt]:X4}");
                     outputBuffer[maskOffset] = (byte)(outputsChangeMask[numExt] & 0xFF);
                     outputBuffer[maskOffset + 1] = (byte)((outputsChangeMask[numExt] >> 8) & 0xFF);
                 } else {
@@ -191,7 +191,7 @@ namespace DirectOutput.Cab.Out.DudesCab
 
             if (extensionChangeMask != 0) {
                 outputBuffer[0] = extensionChangeMask;
-                Log.Debug($"ExtenstionMask {outputBuffer[0]:X2}");
+                Log.Instrumentation("DudesCab", $"ExtenstionMask {outputBuffer[0]:X2}");
                 Dev.SendCommand(Device.HIDReportType.RT_PWM_OUTPUTS, outputBuffer.ToArray());
             }
             firstInit = false;
@@ -418,7 +418,7 @@ namespace DirectOutput.Cab.Out.DudesCab
                     data = data.ToList().Concat(parameters).ToArray();
                 }
 
-                Log.Debug($"DudesCab SendCommand: {command}, [{string.Join(",", data.ToArray())}]");
+                Log.Instrumentation("DudesCab", $"DudesCab SendCommand: {command}, [{string.Join(",", data.ToArray())}]");
 
                 //Compute how many parts will be needed to send the command, based on the provided DudesCab caps.
                 byte bufferOffset = 5;

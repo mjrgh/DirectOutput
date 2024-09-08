@@ -3,6 +3,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Threading;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DirectOutput
 {
@@ -11,14 +12,6 @@ namespace DirectOutput
     /// </summary>
     public class Log
     {
-        public enum ELogLevel
-        {
-            Exception = 0,
-            Error,
-            Warning,
-            Debug  
-        }
-
         static StreamWriter Logger;
         static bool IsInitialized = false;
         static bool IsOk = false;
@@ -27,7 +20,7 @@ namespace DirectOutput
 
         private static string _Filename = ".\\DirectOutput.log";
 
-        private static ELogLevel _LogLevel = ELogLevel.Warning;
+        private static string[] _ActiveInstrumentations = new string[0];
 
         // collection of records from before the log file was set up, to allow
         // logging and debugging of initial config file setup
@@ -45,20 +38,13 @@ namespace DirectOutput
             set { _Filename = value; }
         }
 
-        /// <summary>
-        /// Gets or sets the log level.
-        /// </summary>
-        /// <value>
-        /// The Log level (Exception/Error/Warning/Debug).
-        /// </value>
-        public static string LogLevel
+        public static string Instrumentations
         {
-            get { return _LogLevel.ToString(); }
-            set { 
-                if (!Enum.TryParse(value, ignoreCase:true, out _LogLevel)){
-                    _LogLevel = ELogLevel.Warning;
-                    Error($"Error when setting LogLevel, trying to set value [{value}], available values are [Exception,Error,Warning,Debug], defaulting to Warning");
-                }
+            set {
+                if (value.IsNullOrEmpty())
+                    _ActiveInstrumentations = new string[0];
+                else
+                    _ActiveInstrumentations = value.Split(',');
             }
         }
 
@@ -91,7 +77,9 @@ namespace DirectOutput
                             BuildDate.ToString("yyyy.MM.dd HH:mm")));
                         Logger.WriteLine("MJR Grander Unified DOF R3++ edition feat. Djrobx, Rambo3, Vroonsh, CSD, and Freezy");
                         Logger.WriteLine("DOF created by SwissLizard | https://github.com/mjrgh/DirectOutput");
-
+                        if (_ActiveInstrumentations.Length > 0) {
+                            Logger.WriteLine($"Active instrumentations : {string.Join(",", _ActiveInstrumentations)}");
+                        }
                         Logger.WriteLine("{0}\t{1}", DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss.fff"), "DirectOutput Logger initialized");
 
                         IsOk = true;
@@ -200,16 +188,9 @@ namespace DirectOutput
         /// <param name="Message">The message.</param>
         public static void Error(string Message)
         {
-            if (_LogLevel < ELogLevel.Error)
-                return;
             Write("Error: {0}".Build(Message));
         }
 
-        /// <summary>
-        /// Writes a warning message to the log.
-        /// </summary>
-        /// <param name="Message">The message.</param>
-        public static void Warning(string Message)
 		/// <summary>
 		/// One-time message logging.  Logs a message, identified by a string
 		/// key, <b>only</b> the first time the key is used.  This is useful for
@@ -248,8 +229,6 @@ namespace DirectOutput
 		/// <param name="Message">The message.</param>
 		public static void Warning(string Message)
         {
-            if (_LogLevel < ELogLevel.Warning)
-                return;
             Write("Warning: {0}".Build(Message));
         }
 
@@ -321,13 +300,29 @@ namespace DirectOutput
         }
 
         /// <summary>
+        /// Writes the specified instrumentation debug message to the log file.
+        /// If a key is provided, it'll check if it's one of the active instrumentations provided by the GlobalConfig to log it.
+        /// </summary>
+        /// <param name="key">The instrumentation key.</param>
+        /// <param name="Message">The message to be written to the log file.</param>
+        public static void Instrumentation(string key, string Message = "")
+        {
+            if (key.IsNullOrEmpty()) {
+                Write($"Debug : {Message}");
+            } else {
+                if (!_ActiveInstrumentations.FirstOrDefault(I => string.Compare(I, key, StringComparison.InvariantCultureIgnoreCase) == 0).IsNullOrEmpty()) {
+                    Write($"Debug [{key}] : {Message}");
+                }
+            }
+        }
+
+        /// <summary>
         /// Writes the specified debug message to the log file.
         /// </summary>
         /// <param name="Message">The message to be written to the log file.</param>
         public static void Debug(string Message = "")
         {
-            if (_LogLevel < ELogLevel.Debug) return;
-            Write("Debug: {0}".Build(Message));
+            Instrumentation(null, Message);
         }
 
     }

@@ -155,7 +155,7 @@ namespace DirectOutput
                 try
                 {
                     Log.Filename = GlobalConfig.GetLogFilename((!TableFilename.IsNullOrWhiteSpace() ? new FileInfo(TableFilename).FullName : ""), RomName);
-                    Log.LogLevel = GlobalConfig.LogLevel;
+                    Log.Instrumentations = GlobalConfig.Instrumentation;
                     Log.Init();
                 }
                 catch (Exception E)

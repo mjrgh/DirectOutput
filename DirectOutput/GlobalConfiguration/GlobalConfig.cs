@@ -477,12 +477,12 @@ namespace DirectOutput.GlobalConfiguration
         }
 
 
-        private string _LogLevel = "Info";
+        private string _Instrumentation = string.Empty;
 
-        public string LogLevel
+        public string Instrumentation
         {
-            get { return _LogLevel; }
-            set { _LogLevel = value; }
+            get { return _Instrumentation; }
+            set { _Instrumentation = value; }
         }
 
         #endregion
