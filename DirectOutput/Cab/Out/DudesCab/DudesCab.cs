@@ -350,9 +350,9 @@ namespace DirectOutput.Cab.Out.DudesCab
                             curMask++;
                         }
                     }
-                    Log.Write($"    Output configuration received, highest configured out is #{this._NumOutputs +1}");
+                    Log.Write($"    Output configuration received, highest configured output is #{this._NumOutputs +1}");
                 } else {
-                    Log.Write($"    No output configuration received (firmware before 1.1.2), {this._NumOutputs} will be used");
+                    Log.Warning($"No output configuration received, {this._NumOutputs} will be used, you should update your DudesCab firmware");
                 }
 
             }
@@ -370,10 +370,10 @@ namespace DirectOutput.Cab.Out.DudesCab
                         if (TryReopenHandle())
                             continue;
 
-                        Log.Write("DudesCab Controller USB error reading from device: " + GetLastWin32ErrMsg());
+                        Log.Error("DudesCab Controller USB error reading from device: " + GetLastWin32ErrMsg());
                         return null;
                     } else if (actual != rptLen) {
-                        Log.Write("DudesCab Controller USB error reading from device: not all bytes received");
+                        Log.Error("DudesCab Controller USB error reading from device: not all bytes received");
                         return null;
                     } else
                         return buf;
@@ -392,10 +392,10 @@ namespace DirectOutput.Cab.Out.DudesCab
                         if (TryReopenHandle())
                             continue;
 
-                        Log.Write("DudesCab Controller USB error sending request to device: " + GetLastWin32ErrMsg());
+                        Log.Error("DudesCab Controller USB error sending request to device: " + GetLastWin32ErrMsg());
                         return false;
                     } else if (actual != caps.OutputReportByteLength) {
-                        Log.Write("DudesCab Controller USB error sending request: not all bytes sent");
+                        Log.Error("DudesCab Controller USB error sending request: not all bytes sent");
                         return false;
                     } else {
                         return true;
@@ -426,7 +426,7 @@ namespace DirectOutput.Cab.Out.DudesCab
                 // if the last error is 6 ("invalid handle"), try re-opening it
                 if (Marshal.GetLastWin32Error() == 6) {
                     // try opening a new handle on the device path
-                    Log.Write("DudesCab Controller: invalid handle on read; trying to reopen handle");
+                    Log.Error("DudesCab Controller: invalid handle on read; trying to reopen handle");
                     IntPtr fp2 = OpenFile();
 
                     // if that succeeded, replace the old handle with the new one and retry the read
