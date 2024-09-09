@@ -144,6 +144,11 @@ namespace DirectOutput.Cab.Out.DudesCab
 
         protected List<byte> OutputBuffer = new List<byte>();
 
+        private void Instrumentation(string Message)
+        {
+            Log.Instrumentation("DudesCab", Message);
+        }
+
         /// <summary>
         /// Send updated outputs to the physical device.
         /// </summary>
@@ -165,9 +170,7 @@ namespace DirectOutput.Cab.Out.DudesCab
                     if (NewOutputValues[numDofOutput] != OldOutputValues[numDofOutput]) {
                         byte extNum = (byte)(numDofOutput / Dev.PwmMaxOutputsPerExtension);
                         byte outputNum = (byte)(numDofOutput % Dev.PwmMaxOutputsPerExtension);
-                        if (DebugCommunication) {
-                            Log.Debug($"Prepare Dof Value to send : DOF #{numDofOutput} {OldOutputValues[numDofOutput]} => {NewOutputValues[numDofOutput]}, Extension #{extNum}, Output #{outputNum}");
-                        }
+                        Instrumentation($"Prepare Dof Value to send : DOF #{numDofOutput} {OldOutputValues[numDofOutput]} => {NewOutputValues[numDofOutput]}, Extension #{extNum}, Output #{outputNum}");
                         extMask |= (byte)(1 << extNum);
                         if (oldExtMask != extMask) {
                             //New extension add output masks placeholders
@@ -176,12 +179,10 @@ namespace DirectOutput.Cab.Out.DudesCab
                             if (outputMask != 0) {
                                 OutputBuffer[outputMaskOffset] = (byte)(outputMask & 0xFF);
                                 OutputBuffer[outputMaskOffset + 1] = (byte)((outputMask >> 8) & 0xFF);
-                                if (DebugCommunication)
-                                    Log.Debug($"        Changed OutputMask 0x{outputMask:X4}");
+                                Instrumentation($"        Changed OutputMask 0x{outputMask:X4}");
                                 outputMask = 0;
                             }
-                            if (DebugCommunication)
-                                Log.Debug($"    Extension {extNum} has changes");
+                            Instrumentation($"    Extension {extNum} has changes");
                             outputMaskOffset = OutputBuffer.Count;
                             OutputBuffer.Add(0);//Low bits of output mask
                             OutputBuffer.Add(0);//High bits of output mask
@@ -197,15 +198,12 @@ namespace DirectOutput.Cab.Out.DudesCab
                 if (outputMask != 0) {
                     OutputBuffer[outputMaskOffset] = (byte)(outputMask & 0xFF);
                     OutputBuffer[outputMaskOffset + 1] = (byte)((outputMask >> 8) & 0xFF);
-                    if (DebugCommunication)
-                        Log.Debug($"        Changed OutputMask 0x{outputMask:X4}");
+                    Instrumentation($"        Changed OutputMask 0x{outputMask:X4}");
                 }
                 OutputBuffer[0] = extMask;
-                if (DebugCommunication)
-                    Log.Debug($"    ExtenstionMask 0x{OutputBuffer[0]:X2}");
+                Instrumentation($"    ExtenstionMask 0x{OutputBuffer[0]:X2}");
 
-                if (DebugCommunication)
-                    Log.Debug($"{nbValuesToSend} Dof Values to send to Dude's cab");
+                Instrumentation($"{nbValuesToSend} Dof Values to send to Dude's cab");
                 Dev.SendCommand(Device.HIDReportType.RT_PWM_OUTPUTS, OutputBuffer.ToArray());
             }
 
