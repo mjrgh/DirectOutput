@@ -325,11 +325,13 @@ namespace DirectOutput.Cab.Out.DudesCab
 
                 //Ask for Pwm Configuration
                 SendCommand(HIDReportType.RT_PWM_GETEXTENSIONSINFOS);
-                answer = ReadUSB().Skip(hidCommandPrefixSize).ToArray();
+                answer = ReadUSB().ToArray();
+                var answersize = answer[hidCommandPrefixSize-1];
+                answer = answer.Skip(hidCommandPrefixSize).ToArray();
                 PwmMaxOutputsPerExtension = answer[0];
                 PwmExtensionsMask = answer[1];
                 Log.Write($"    Pwm Informations : Max outputs per extensions {PwmMaxOutputsPerExtension}, Extension Mask 0x{(int)PwmExtensionsMask:X2}");
-                if (answer.Length > 2) {
+                if (answersize > 2) {
                     //Get Outputmasks and process remaps
                     var nbMasks = answer[2];
                     var maskSize = answer[3];
