@@ -50,6 +50,8 @@ namespace PinballX
         {
             switch (State)
             {
+                case 6:
+                    return "PBXWheelStart";
                 case 10:
                     return "PBXWheel";
                 case 20:
@@ -291,7 +293,7 @@ namespace PinballX
                     if (TableRomName.Equals(Rom, StringComparison.InvariantCultureIgnoreCase))
                     {
                         UseTableRom = TableRomName;
-                        break;
+                            break;
                     };
                 };
 
@@ -310,7 +312,7 @@ namespace PinballX
                 else
                 {
                     Log($"Possible misconfiguration detected: 'PF Back PBX MX' may not be set up properly for tablename: {MatchMapping.TableName.ToUpper()}.");
-            }
+                }
             }
             else
             {
@@ -403,7 +405,7 @@ namespace PinballX
                 SetupRomNameLinks();
 
                 Log("Sending initial PBX state to DOF");
-
+                
                 DM.UpdateNamedTableElement("PBXScreenSaver", 0);
                 UpdatePBXState(10);
                 Log("Init complete");
@@ -411,7 +413,7 @@ namespace PinballX
             catch (Exception E)
             {
                 Log("Init failed: " + E.Message);
-                Log(". Stack: " + E.StackTrace);
+		Log(". Stack: " + E.StackTrace);
                 String depth = ".";
                 for (Exception ei = E.InnerException; ei != null; ei = ei.InnerException, depth += ".")
                 {
@@ -499,13 +501,13 @@ namespace PinballX
                 {
                     DM.UpdateNamedTableElement(LastGameSelect, 0);
                 }
-                SendAction("PBXGameSelect");
+                                SendAction("PBXGameSelect");
                 LastGameSelect = GetRom(Info.GameShortDescription,Info.PinMAMEROM);
                 if (string.IsNullOrEmpty(LastGameSelect))
                 {
                     LastGameSelect = "PinballXMX"; 
                 }
-
+                
                 DM.UpdateNamedTableElement(LastGameSelect, 1);
                 Log("Game selected " + Info.GameShortDescription + " (" + (string.IsNullOrEmpty(LastGameSelect) ? "No update sent" : "Update sent for " + LastGameSelect) + ")");
             }
@@ -605,14 +607,15 @@ namespace PinballX
                 {
                     InputAction = GetInputAction(JoyInputs, Input_Buttons);
                 }
-
+               
                 string PBXAction = null;
                 if (InputAction != InputActionEnum.NoInput)
                 {
-
+                    
                     switch (PinballXStatus)
                     {
-                        case 10:
+
+                        case 6: case 10:
                             //Wheel mode
                             switch (InputAction)
                             {
