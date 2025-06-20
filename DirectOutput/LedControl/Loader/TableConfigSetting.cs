@@ -291,7 +291,7 @@ namespace DirectOutput.LedControl.Loader
         /// </exception>
         public void ParseSettingData(string SettingData)
         {
-            string S = SettingData.Trim().ToUpper();
+            string S = SettingData.Trim();
 
             if (S.StartsWith("("))
             {
@@ -468,7 +468,7 @@ namespace DirectOutput.LedControl.Loader
                 }
                 else if (Parts[PartNr].Length > 3 && Parts[PartNr].Substring(0, 3).ToUpper() == "APC")
                 {
-                    ColorName2 = Parts[PartNr].Substring(3);
+                    ColorName2 = Parts[PartNr].Substring(3).ToUpper();
                     IsPlasma = true;
                     IsArea = true;
                 }
@@ -482,7 +482,7 @@ namespace DirectOutput.LedControl.Loader
 
                 else if (Parts[PartNr].Length > 3 && Parts[PartNr].Substring(0, 3).ToUpper() == "SHP" )
                 {
-                    ShapeName = Parts[PartNr].Substring(3).Trim();
+                    ShapeName = Parts[PartNr].Substring(3).Trim().ToUpper();
                     IsArea = true;
                 }
                 else if (Parts[PartNr].Length > 3 && Parts[PartNr].Substring(0, 3).ToUpper() == "ABT" && Parts[PartNr].Substring(3).IsInteger())
@@ -745,10 +745,16 @@ namespace DirectOutput.LedControl.Loader
                     }
                     IntegerCnt++;
                 }
-                else if (PartNr == 0)
+                // if Parts[PartNr] starts with capital letter and the rest small caps letters or underscore
+                else if (Parts[PartNr].Length > 2 && char.IsUpper(Parts[PartNr][0]) && Parts[PartNr].Skip(1).All(c => (char.IsLower(c) || c == '_')))
                 {
-                    //This should be a color
-                    ColorName = Parts[PartNr];
+                    // This should be a color
+                    ColorName = Parts[PartNr].ToUpper();
+                }
+                else if (Parts[PartNr].Length >= 7 && Parts[PartNr].Length <= 9 && Parts[PartNr][0] == '#' && Parts[PartNr].Substring(1).All(c => Uri.IsHexDigit(c)) )
+                {
+                    // This should be a color in hex format, e.g. #RRGGBB or #RRGGBBAA
+                    ColorName = Parts[PartNr].ToUpper();
                 }
                 else
                 {
