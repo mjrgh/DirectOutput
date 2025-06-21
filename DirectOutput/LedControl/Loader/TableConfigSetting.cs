@@ -315,7 +315,7 @@ namespace DirectOutput.LedControl.Loader
 
                 if (ClosingBracketPos > 0)
                 {
-                    Condition = S.Substring(0, ClosingBracketPos + 1);
+                    Condition = S.Substring(0, ClosingBracketPos + 1).ToUpper();
                     OutputControl = OutputControlEnum.Condition;
                     S = S.Substring(Condition.Length).Trim();
                     //TODO: Maybe add a check for the condition validity
@@ -359,13 +359,13 @@ namespace DirectOutput.LedControl.Loader
                 }
                 if (TriggerEndPos == -1) TriggerEndPos = S.Length;
 
-                string Trigger = S.Substring(0, TriggerEndPos).Trim();
+                string Trigger = S.Substring(0, TriggerEndPos).ToUpper().Trim();
 
 
 
                 //Get output state and table element (if applicable)
                 bool ParseOK = true;
-                switch (Trigger.ToUpper())
+                switch (Trigger)
                 {
                     case "ON":
                     case "1":
