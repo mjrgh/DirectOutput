@@ -1,6 +1,7 @@
-﻿using System;
+﻿using DirectOutput.FX.MatrixFX;
+using System;
 using System.Linq;
-using DirectOutput.FX.MatrixFX;
+using System.Text.RegularExpressions;
 
 namespace DirectOutput.LedControl.Loader
 {
@@ -745,15 +746,20 @@ namespace DirectOutput.LedControl.Loader
                     }
                     IntegerCnt++;
                 }
-                // if Parts[PartNr] starts with capital letter and the rest small caps letters or underscore
-                else if (Parts[PartNr].Length > 2 && char.IsUpper(Parts[PartNr][0]) && Parts[PartNr].Skip(1).All(c => (char.IsLower(c) || c == '_')))
+                // if Parts[PartNr] starts with # and a HTML-style hex color value we assume a color.
+                else if (Regex.IsMatch(Parts[PartNr], @"^#"))
                 {
-                    // This should be a color
+                    if (!Regex.IsMatch(Parts[PartNr], @"^#[0-9A-Fa-f]{6,8}$"))
+                    {
+                        Log.Warning("Invalid '#' HTML-style color code \"{0}\", #rrggbb or #rrggbbaa required".Build(Parts[PartNr]));
+                        throw new Exception("Invalid '#' HTML-style color code \"{0}\", #rrggbb or #rrggbbaa required".Build(Parts[PartNr]));
+                    }
+                    // This should be a HTML-style hex color string
                     ColorName = Parts[PartNr].ToUpper();
                 }
-                else if (Parts[PartNr].Length >= 7 && Parts[PartNr].Length <= 9 && Parts[PartNr][0] == '#' && Parts[PartNr].Substring(1).All(c => Uri.IsHexDigit(c)) )
+                // if Parts[PartNr] contains only capital and small caps letters or underscore we assume a color
+                else if (Parts[PartNr].Length > 2 && Regex.IsMatch(Parts[PartNr], @"^[A-Za-z_]+$"))
                 {
-                    // This should be a color in hex format, e.g. #RRGGBB or #RRGGBBAA
                     ColorName = Parts[PartNr].ToUpper();
                 }
                 else
