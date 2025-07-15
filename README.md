@@ -4,8 +4,10 @@ As of July 2025, my work on the "Grand Unified" edition of DirectOutput has
 moved back to the official DirectOutput github repository at
 [github.com/DirectOutput/DirectOutput](https://github.com/DirectOutput/DirectOutput).
 
-<b>Please submit any future Pull Requests (PRs) through the main DirectOutput
-repos rather than this fork.</b>
+<b>For the latest source code, refer to the [main repos](https://github.com/DirectOutput/DirectOutput).
+
+<b>Please submit any future Pull Requests (PRs) through the [main repos](https://github.com/DirectOutput/DirectOutput)
+rather than this fork.</b>
 
 I plan to keep this repository online indefinitely for the sake of other
 sites that link here, but if you're maintaining a site that links here,
